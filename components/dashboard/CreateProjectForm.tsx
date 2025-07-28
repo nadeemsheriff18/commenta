@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,404 +12,221 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, AlertCircle, MessageSquare } from "lucide-react";
+import { Loader2, ArrowLeft, MessageSquare } from "lucide-react";
 import { apiService, CreateProjectData } from "@/lib/api";
 import { toast } from "sonner";
-const loadingMessages = [
-  "Auto generating for you...",
-  "Adding the recipes...",
-  "Finalizing...",
-];
+
 interface CreateProjectFormProps {
   onCreateProject: () => void;
   onBack?: () => void;
+}
+
+// --- MODIFIED: Create a local type for the form's flat state ---
+interface FormState {
+  name: string;
+  product_link: string;
+  audience: string;
+  problem: string;
+  solution: string;
 }
 
 export default function CreateProjectForm({
   onCreateProject,
   onBack,
 }: CreateProjectFormProps) {
-  const handleGenerateExplain = async (link: string, tag: string) => {
-    // setGeneratingComments((prev) => new Set(prev).add(mentionId));
-    console.log("lnk:", link);
-    if (!link) {
-      const newErrors: Partial<CreateProjectData> = {};
-      toast.success("Need the url to generate");
-      newErrors.product_link = "Product link is required";
-      setErrors(newErrors);
-      return;
-    }
-    try {
-      startLoading("gen");
-      const requestParams = link;
-      const response = await apiService.generateExplain(requestParams);
-      console.log("Explain response:", response);
-      console.log("Explain response---:", response.data);
-      console.log("------- EXPLAIN response:", response.data!.audience);
-      stopLoading("gen");
-      const audiance = response.data!.audience;
-      const solution = response.data!.solution;
-      const problem = response.data!.problem;
-      if (response.success && response.data) {
-        setFormData((prev) => ({
-          ...prev,
-          audiance,
-          solution,
-          problem,
-        }));
-        toast.success("Comment generated successfully!");
-      } else {
-        toast.error(response.message || "Failed to generate comment");
-      }
-    } catch (error) {
-      toast.error("Failed to generate comment");
-    } finally {
-      // setGeneratingComments((prev) => {
-      //   const newSet = new Set(prev);
-      //   newSet.delete(mentionId);
-      //   return newSet;
-      // });
-    }
-  };
-  const [formData, setFormData] = useState<CreateProjectData>({
+  // --- MODIFIED: Use the local FormState for the formData ---
+  const [formData, setFormData] = useState<FormState>({
     name: "",
     product_link: "",
     audience: "",
     problem: "",
     solution: "",
-    // person_story: "",
   });
-  const [wordCounts, setWordCounts] = useState({
-    problem: 0,
-    audiance: 0,
-    solution: 0,
-  });
-  const startLoading = (tag: string) => {
-    setLoadingStates((prev) => ({ ...prev, [tag]: true }));
-  };
 
-  // Stop loading for a specific tag
-  const stopLoading = (tag: string) => {
-    setLoadingStates((prev) => ({ ...prev, [tag]: false }));
-  };
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
-    {}
-  );
-  const isAnyLoading = Object.values(loadingStates).some((state) => state);
-  const [messageIndex, setMessageIndex] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Partial<CreateProjectData>>({});
-  useEffect(() => {
-    if (!isAnyLoading) return;
+  const [errors, setErrors] = useState<Partial<FormState>>({});
 
-    const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
-    }, 1500);
-
-    return () => clearInterval(interval);
-  }, [isAnyLoading]);
-  const MAX_WORDS = 400;
-  const validateForm = (): boolean => {
-    const newErrors: Partial<CreateProjectData> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Project name is required";
+  const handleGenerateExplain = async () => {
+    if (!formData.product_link) {
+      toast.error("Please enter a product URL first.");
+      setErrors((prev) => ({ ...prev, product_link: "Product link is required to auto-generate." }));
+      return;
     }
 
-    if (!formData.product_link.trim()) {
-      newErrors.product_link = "Product link is required";
-    } else {
-      try {
-        new URL(formData.product_link);
-      } catch {
-        newErrors.product_link = "Please enter a valid URL";
+    setIsGenerating(true);
+    try {
+      const response = await apiService.generateExplain(formData.product_link);
+      if (response.success && response.data) {
+        setFormData((prev) => ({
+          ...prev,
+          audience: response.data.audience || "",
+          solution: response.data.solution || "",
+          problem: response.data.problem || "",
+        }));
+        toast.success("Project details generated successfully!");
+      } else {
+        toast.error(response.message || "Failed to auto-generate details.");
       }
+    } catch (error) {
+      toast.error("Failed to auto-generate details.");
+    } finally {
+      setIsGenerating(false);
     }
+  };
 
-    if (!formData.audience.trim()) {
-      newErrors.audience = "Audiance is required";
-    }
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Product name is required";
-    }
-
-    if (!formData.problem.trim()) {
-      newErrors.problem = "Problem is required";
-    }
-
-    if (!formData.solution.trim()) {
-      newErrors.solution = "Solution is required";
-    }
+  const validateForm = (): boolean => {
+    const newErrors: Partial<FormState> = {};
+    if (!formData.name.trim()) newErrors.name = "Project name is required";
+    if (!formData.product_link.trim()) newErrors.product_link = "Product link is required";
+    if (!formData.audience.trim()) newErrors.audience = "Audience description is required";
+    if (!formData.problem.trim()) newErrors.problem = "Problem description is required";
+    if (!formData.solution.trim()) newErrors.solution = "Solution description is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Replace your handleSubmit with this version
-
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!validateForm()) return;
-
-  setIsSubmitting(true);
-  try {
-    const createForm = {
-      name: formData.name,
-      product_link: formData.product_link,
-      product_explanation: {
-        audience: formData.audience, // <-- Corrected spelling
-        problem: formData.problem,
-        solution: formData.solution,
-      },
-    };
-    const response = await apiService.createProject(createForm);
-    if (response.success) {
-      toast.success("Project created successfully");
-      onCreateProject();
-    } else {
-      toast.error(response.message || "Failed to create project");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      toast.error("Please fill in all required fields.");
+      return;
     }
-  } catch (error: any) {
-    toast.error(error.message || "Failed to create project");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-  // Replace your handleInputChange with this version
-
-const handleInputChange = (field: keyof CreateProjectData, value: string) => {
-  setFormData((prev) => ({ ...prev, [field]: value }));
-  
-  if (["problem", "audience", "solution"].includes(field)) {
-    const wordCount = value.trim() === "" ? 0 : value.trim().split(/\s+/).length;
-    if (wordCount <= MAX_WORDS) {
-        setWordCounts((prev) => ({ ...prev, [field]: wordCount }));
-    } else {
-        toast.error(`Maximum ${MAX_WORDS} words allowed.`);
-        // Optionally, trim the value to the max word count
+    setIsSubmitting(true);
+    try {
+      // --- MODIFIED: Construct the nested payload for the API ---
+      const createPayload: CreateProjectData = {
+        name: formData.name,
+        product_link: formData.product_link,
+        product_explanation: {
+          audience: formData.audience,
+          problem: formData.problem,
+          solution: formData.solution,
+        },
+      };
+      const response = await apiService.createProject(createPayload);
+      if (response.success) {
+        toast.success("Project created successfully!");
+        onCreateProject();
+      } else {
+        toast.error(response.message || "Failed to create project");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create project");
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  if (errors[field]) {
-    setErrors((prev) => ({ ...prev, [field]: undefined }));
-  }
-};
+  const handleInputChange = (field: keyof FormState, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      {onBack && (
-        <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="flex items-center"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Projects
-          </Button>
-        </div>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Create New Project</CardTitle>
-          <CardDescription>
-            Fill in the details below to create your new project
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="product_link">Product Link *</Label>
-              <Input
-                id="product_link"
-                type="url"
-                placeholder="https://yourproduct.com"
-                value={formData.product_link}
-                onChange={(e) =>
-                  handleInputChange("product_link", e.target.value)
-                }
-                disabled={isSubmitting}
-                className={errors.product_link ? "border-red-500" : ""}
-              />
-              {errors.product_link && (
-                <p className="text-sm text-red-600">{errors.product_link}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Project Name *</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Enter your project name"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                disabled={isSubmitting}
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && (
-                <p className="text-sm text-red-600">{errors.name}</p>
-              )}
-            </div>
-            <div>
-              <Button
-                type="button"
-                onClick={() =>
-                  handleGenerateExplain(formData.product_link, "gen")
-                }
-                disabled={loadingStates["gen"]}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Auto Generate
-              </Button>
-              {loadingStates["gen"] && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {loadingMessages[messageIndex]}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="person_problem">Problem *</Label>
-              <Textarea
-                id="person_problem"
-                rows={4}
-                placeholder="Describe your product problem"
-                value={formData.problem}
-                onChange={(e) => handleInputChange("problem", e.target.value)}
-                disabled={isSubmitting}
-                className={errors.problem ? "border-red-500" : ""}
-              />
-              <div className="flex items-center space-x-2">
-                <span
-                  className={`text-sm ${
-                    wordCounts.problem > MAX_WORDS * 0.9
-                      ? "text-red-600"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {wordCounts.problem}/{MAX_WORDS} words
-                </span>
-                {wordCounts.problem > MAX_WORDS * 0.9 && (
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                )}
-              </div>
-
-              {wordCounts.problem === MAX_WORDS && (
-                <Badge variant="destructive" className="text-xs">
-                  Character limit reached
-                </Badge>
-              )}
-              {errors.problem && (
-                <p className="text-sm text-red-600">{errors.problem}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="product_audiance">Audiance *</Label>
-              <Textarea
-                id="product_audiance"
-                placeholder="Describe your product audiance"
-                value={formData.audience}
-                onChange={(e) => handleInputChange("audience", e.target.value)}
-                disabled={isSubmitting}
-                rows={4}
-                className={errors.audience ? "border-red-500" : ""}
-              />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span
-                    className={`text-sm ${
-                      wordCounts.audiance > MAX_WORDS * 0.9
-                        ? "text-red-600"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {wordCounts.audiance}/{MAX_WORDS} words
-                  </span>
-                  {wordCounts.audiance > MAX_WORDS * 0.9 && (
-                    <AlertCircle className="h-4 w-4 text-red-500" />
-                  )}
+    <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/50 min-h-full">
+        <div className="max-w-3xl mx-auto">
+            {onBack && (
+                <div className="mb-4">
+                <Button variant="ghost" onClick={onBack} className="flex items-center text-sm text-gray-600 -ml-4">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Projects
+                </Button>
                 </div>
+            )}
 
-                {wordCounts.audiance === MAX_WORDS && (
-                  <Badge variant="destructive" className="text-xs">
-                    Character limit reached
-                  </Badge>
-                )}
-              </div>
-              {errors.audience && (
-                <p className="text-sm text-red-600">{errors.audience}</p>
-              )}
-            </div>
+            <Card className="shadow-lg">
+                <CardHeader>
+                <CardTitle className="text-2xl">Create New Project</CardTitle>
+                <CardDescription>
+                    Fill in the details below. This information helps the AI understand your project.
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="product_link">Product Link *</Label>
+                        <Input
+                            id="product_link" type="url" placeholder="https://yourproduct.com"
+                            value={formData.product_link}
+                            onChange={(e) => handleInputChange("product_link", e.target.value)}
+                            disabled={isSubmitting}
+                            className={errors.product_link ? "border-red-500" : ""}
+                        />
+                        {errors.product_link && <p className="text-sm text-red-600">{errors.product_link}</p>}
+                    </div>
 
-            {/* <div className="space-y-2">
-              <Label htmlFor="person_name">Person Name *</Label>
-              <Input
-                id="person_name"
-                type="text"
-                placeholder="Enter your name"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                disabled={isSubmitting}
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && (
-                <p className="text-sm text-red-600">{errors.name}</p>
-              )}
-            </div> */}
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Project Name *</Label>
+                        <Input
+                            id="name" type="text" placeholder="Enter your project name"
+                            value={formData.name}
+                            onChange={(e) => handleInputChange("name", e.target.value)}
+                            disabled={isSubmitting}
+                            className={errors.name ? "border-red-500" : ""}
+                        />
+                        {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                        <Button type="button" onClick={handleGenerateExplain} disabled={isGenerating || !formData.product_link} className="bg-indigo-600 hover:bg-indigo-700">
+                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <MessageSquare className="mr-2 h-4 w-4" />}
+                            Auto-generate descriptions
+                        </Button>
+                    </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="person_solution">Solution *</Label>
-              <Textarea
-                id="person_solution"
-                placeholder="Describe your product solution"
-                value={formData.solution}
-                onChange={(e) => handleInputChange("solution", e.target.value)}
-                disabled={isSubmitting}
-                rows={4}
-                className={errors.solution ? "border-red-500" : ""}
-              />
-              <div className="flex items-center space-x-2">
-                <span
-                  className={`text-sm ${
-                    wordCounts.solution > MAX_WORDS * 0.9
-                      ? "text-red-600"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {wordCounts.solution}/{MAX_WORDS} words
-                </span>
-                {wordCounts.solution > MAX_WORDS * 0.9 && (
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                )}
-              </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="problem">Problem *</Label>
+                        <Textarea
+                            id="problem" rows={4} placeholder="What problem does your product solve?"
+                            value={formData.problem}
+                            onChange={(e) => handleInputChange("problem", e.target.value)}
+                            disabled={isSubmitting}
+                            className={errors.problem ? "border-red-500" : ""}
+                        />
+                         {errors.problem && <p className="text-sm text-red-600">{errors.problem}</p>}
+                    </div>
 
-              {wordCounts.solution === MAX_WORDS && (
-                <Badge variant="destructive" className="text-xs">
-                  Character limit reached
-                </Badge>
-              )}
-              {errors.solution && (
-                <p className="text-sm text-red-600">{errors.solution}</p>
-              )}
-            </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="audience">Audience *</Label>
+                        <Textarea
+                            id="audience" placeholder="Who is your target audience?"
+                            value={formData.audience}
+                            onChange={(e) => handleInputChange("audience", e.target.value)}
+                            disabled={isSubmitting}
+                            rows={4}
+                            className={errors.audience ? "border-red-500" : ""}
+                        />
+                        {errors.audience && <p className="text-sm text-red-600">{errors.audience}</p>}
+                    </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Project...
-                </>
-              ) : (
-                "Create Project"
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+                    <div className="space-y-2">
+                        <Label htmlFor="solution">Solution *</Label>
+                        <Textarea
+                            id="solution" placeholder="How does your product solve the problem?"
+                            value={formData.solution}
+                            onChange={(e) => handleInputChange("solution", e.target.value)}
+                            disabled={isSubmitting}
+                            rows={4}
+                            className={errors.solution ? "border-red-500" : ""}
+                        />
+                        {errors.solution && <p className="text-sm text-red-600">{errors.solution}</p>}
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                        <Button type="submit" className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Project...</>
+                            ) : ( "Create Project" )}
+                        </Button>
+                    </div>
+                </form>
+                </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }
