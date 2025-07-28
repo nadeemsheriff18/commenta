@@ -75,7 +75,7 @@ export default function Dashboard({
     // console.log("Project created successfully, auth check result:", res);
     setCurrentView("projects");
     // Clear API cache and trigger refresh
-    apiService.clearCache();
+  
     setProjectsRefreshKey((prev) => prev + 1);
   };
   const handleUserNotFound = () => {
