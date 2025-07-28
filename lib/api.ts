@@ -82,6 +82,12 @@ export interface SubredditInfo {
   url: string;
   isSystemAdded?: boolean;
 }
+export interface ProjectListingResponse {
+  total_projects: number;
+  total_mentions: number;
+  total_subreddits: number;
+  projects: Project[];
+}
 export interface AccountDetails {
   name: string;
   email: string;
@@ -174,7 +180,11 @@ class ApiService {
   async handleOAuthCallback(data: OAuthCallbackData) { return this.makeRequest('/auth_callback', { method: 'POST', body: JSON.stringify(data) }); }
 
   // PROJECTS & STATS
-  async getProjects(params?: PaginationParams) { return this.makeRequest(`/proj_listing`); }
+  
+  // In your ApiService class
+async getProjects(params?: PaginationParams): Promise<ApiResponse<ProjectListingResponse>> {
+  return this.makeRequest<ProjectListingResponse>(`/proj_listing`);
+}
   async createProject(data: CreateProjectData) { return this.makeRequest('/create_project', { method: 'POST', body: JSON.stringify(data) }); }
   async deleteProject(data: { proj_id: number }) { return this.makeRequest('/delete_project', { method: 'POST', body: JSON.stringify(data) }); }
   async getOverallStats() { return this.makeRequest<OverallStats>('/overall_stats'); }
