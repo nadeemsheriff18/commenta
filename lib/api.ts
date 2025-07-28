@@ -199,7 +199,12 @@ async getProjects(params?: PaginationParams): Promise<ApiResponse<ProjectListing
   async getActedMentions(params: MentionParams) { return this.makeRequest<MentionsResponse>(`/acted_mentions?${new URLSearchParams(params as any)}`); }
   async actOnMention(data: ActOnMentionData) { return this.makeRequest('/act_on_mention', { method: 'POST', body: JSON.stringify(data) }); }
   async generateComment(data: GenerateCommentData) { return this.makeRequest<{ comment: string }>('/generat_comment', { method: 'POST', body: JSON.stringify(data) }); }
+// Add this function inside your ApiService class in api.ts
 
+async generateExplain(url: string): Promise<ApiResponse<any>> {
+  const endpoint = `/proj_exp_gen?url=${encodeURIComponent(url)}`;
+  return this.makeRequest(endpoint);
+}
   // KNOWLEDGE BASE
   async getKnowledgeBase() { return this.makeRequest<KnowledgeBaseEntry[]>('/list_knowledge_base'); }
   async addKnowledgeBase(data: AddKnowledgeBaseData) { return this.makeRequest('/add_knowledge_base', { method: 'POST', body: JSON.stringify(data) }); }
