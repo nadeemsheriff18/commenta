@@ -86,6 +86,18 @@ class AuthService {
     // A real production app would make an API call here to a `/verify-token` endpoint.
     return true;
   }
+  async resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${this.baseUrl}/resend_verification_email?email=${encodeURIComponent(email)}`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Failed to resend email.');
+    }
+    return { success: true, message: 'Verification email sent successfully!' };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  }
+}
 
   getStoredUser(): User | null {
     const userStr = Cookies.get(this.userKey);
