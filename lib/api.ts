@@ -557,20 +557,7 @@ class ApiService {
   // 	const response = await this.makeRequest<ProjectSettings>(`/project_setting?proj_id=${projId}`);
   // 	console.log("Fetched project settings response:", response);
   // 	// Cache successful responses
-async resendVerificationEmail(email: string): Promise<ApiResponse> {
-  return this.makeRequest(`/resend_verification_email?email=${encodeURIComponent(email)}`);
-}
 
-async sendForgotPasswordEmail(email: string): Promise<ApiResponse> {
-  return this.makeRequest(`/forgot_password_email?email=${encodeURIComponent(email)}`);
-}
-
-async resetPassword(data: ResetPasswordData): Promise<ApiResponse> {
-  return this.makeRequest('/reset_password', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
 
 
   // 	return response;
