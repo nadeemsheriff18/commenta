@@ -68,45 +68,36 @@ export function useAuth() {
     setIsLoading(false);
 
   }, []);
-  const login = async (email: string, password: string , timezone : string): Promise<boolean> => {
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
-      return false;
-    }
+  // Find your login function and replace it with this corrected version
 
-    if (!email.includes('@')) {
-      toast.error('Please enter a valid email address');
-      return false;
-    }
+const login = async (email: string, password: string, timezone: string): Promise<AuthResponse> => {
+  if (!email || !password) {
+    toast.error('Please fill in all fields');
+    return { success: false, message: 'Please fill in all fields' };
+  }
+  if (!email.includes('@')) {
+    toast.error('Please enter a valid email address');
+    return { success: false, message: 'Please enter a valid email address' };
+  }
 
-    setIsLoading(true);
-    const result = await authService.login(email, password , timezone);
-    console.log("Login response:--::--::", result);
-    // console.log("Login response:", result.user_id);
-    if (result.success) {
-      const uservar = { user_id: result.user!.user_id, name: result.user!.name, email: result.user!.email, picture: result.user!.picture };
-      console.log("User object:", uservar);
-      
-      setUser(uservar);
-      setIsAuthenticated(true);
-      setShowVerificationPrompt(false);
-      setVerificationEmail('');
-      toast.success('Login successful! Welcome back.');
-      setIsLoading(false);
-      // window.location.reload();
-      return true;
-    } else if (result.requiresVerification) {
-      setShowVerificationPrompt(true);
-      setVerificationEmail(result.email || email);
-      toast.error(result.message || 'Please verify your email before logging in');
-      setIsLoading(false);
-      return false;
-    } else {
-      toast.error(result.message || 'Login failed');
-      setIsLoading(false);
-      return false;
-    }
-  };
+  setIsLoading(true);
+  const result = await authService.login(email, password, timezone);
+  setIsLoading(false);
+
+  if (result.success && result.user) {
+    setUser(result.user);
+    setIsAuthenticated(true);
+    toast.success('Login successful! Welcome back.');
+  } else if (result.requiresVerification) {
+    setShowVerificationPrompt(true);
+    setVerificationEmail(result.email || email);
+    toast.error(result.message || 'Please verify your email before logging in');
+  } else {
+    toast.error(result.message || 'Login failed');
+  }
+  
+  return result; // Return the full result object
+};
 
   // const register = async (name: string, email: string, password: string): Promise<boolean> => {
   //   if (!name || !email || !password) {

@@ -107,82 +107,47 @@ export default function ProjectsList({
 
   // Fetch projects with pagination
   const fetchProjects = useCallback(
-    async (params?: Partial<PaginationParams>) => {
-      setIsLoading(true);
-      try {
-        const requestParams: PaginationParams = {
-          page: currentPage,
-          limit: pageSize,
-          search: debouncedSearchTerm || undefined,
-          sortBy,
-          sortOrder,
-          ...params,
-        };
+  async (params?: Partial<PaginationParams>) => {
+    setIsLoading(true);
+    try {
+      const requestParams: PaginationParams = {
+        page: currentPage,
+        limit: pageSize,
+        search: debouncedSearchTerm || undefined,
+        sortBy,
+        sortOrder,
+        ...params,
+      };
 
-        const response = await apiService.getProjects(requestParams);
+      const response = await apiService.getProjects(requestParams);
 
-        console.log("API Response:", response); // Debug log
-        console.log("PROJJJJJJJ", response.data);
-        const apiResponse = response?.data;
-        console.log("PROJ>DATA ", apiResponse);
-        // if (apiResponse && "data" in apiResponse) {
-        //   console.log("API Response Data:", apiResponse.data); // Debug log
-        // } else {
-        //   console.log(
-        //     "API Response Data is not available or not in expected format."
-        //   ); // Debug log
-        // }
-        // const projectsArray = apiResponse.data;
-        const temp = response.data;
-        console.log("TEMPP", temp.length);
-        if (response.success && temp.length) {
-          console.log("HEHEHHEHE");
-          // Ensure response.data is an array and apiResponse is defined
-          const projectsData =
-            apiResponse && Array.isArray(apiResponse.data) ? apiResponse : [];
-          setProjects(apiResponse);
-          // console.log("Projects fetched:", projectsData); // Debug log
+      if (response.success && response.data) {
+        // Correctly access the nested 'projects' array
+        setProjects(response.data.projects || []);
+        
+        // You would also set your stats here if you add a state for them
+        // Example: setStats({ total_mentions: response.data.total_mentions, ... });
 
-          // Update pagination info from response
-          if (response.pagination) {
-            setTotalPages(response.pagination.totalPages);
-            setTotalProjects(response.pagination.total);
-            setCurrentPage(response.pagination.page);
-            // console.log("Pagination info:", response.pagination); // Debug log
-          } else {
-            // Fallback pagination
-            setTotalPages(1);
-            setTotalProjects(projectsData.length);
-            setCurrentPage(1);
-          }
-        } else {
-          console.error("Failed to fetch projects:", response.message);
-          if (response.message?.includes("not authorized")) {
-            toast.error("You're not authorized to view these projects");
-          } else if (response.message?.includes("User not found")) {
-            toast.error("User not found. Please log in again.");
-            if (onUserNotFound) {
-              onUserNotFound();
-            }
-            return;
-          } else {
-            // console.error("Error fetching projects:", response.message);
-          }
+        // Correctly set the total number of projects for pagination
+        setTotalProjects(response.data.total_projects || 0);
 
-          // toast.error(response.message || "Failed to fetch projects");
-          setProjects([]);
-        }
-      } catch (error) {
-        // console.error("Error fetching projects:", error);
-        toast.error("Failed to fetch projects");
+      } else {
         setProjects([]);
-      } finally {
-        setIsLoading(false);
-        setLoading(false);
+        if (response.message?.includes("User not found")) {
+            toast.error("User not found. Please log in again.");
+            if (onUserNotFound) onUserNotFound();
+        }
       }
-    },
-    [currentPage, pageSize, debouncedSearchTerm, sortBy, sortOrder]
-  );
+    } catch (error) {
+      toast.error("Failed to fetch projects");
+      setProjects([]);
+    } finally {
+      setIsLoading(false);
+      setLoading(false); // Make sure to set this to false
+    }
+  },
+  [currentPage, pageSize, debouncedSearchTerm, sortBy, sortOrder, onUserNotFound]
+);
 
   // Fetch projects when dependencies change
   // useEffect(() => {
@@ -199,39 +164,24 @@ export default function ProjectsList({
     }
   }, [debouncedSearchTerm]);
 
-  const handleDeleteProject = async (projectId: string) => {
-    setIsDeleting(true);
-    try {
-      const response = await apiService.deleteProject(projectId);
-
-      if (response.success) {
-        // Remove project from list
-        setProjects((prev) => prev.filter((p) => p.id !== projectId));
-        setTotalProjects((prev) => prev - 1);
-
-        // If current page becomes empty and it's not the first page, go to previous page
-        if (projects.length === 1 && currentPage > 1) {
-          setCurrentPage((prev) => prev - 1);
-        } else {
-          // Refresh current page
-          fetchProjects();
-        }
-
-        toast.success("Project deleted successfully");
-      } else {
-        if (response.message?.includes("not authorized")) {
-          toast.error("You're not authorized to delete this project");
-        } else {
-          toast.error(response.message || "Failed to delete project");
-        }
-      }
-    } catch (error) {
-      toast.error("Failed to delete project");
-    } finally {
-      setIsDeleting(false);
-      setDeleteProjectId(null);
+ const handleDeleteProject = async (projectId: string) => {
+  setIsDeleting(true);
+  try {
+    const response = await apiService.deleteProject({ proj_id: Number(projectId) });
+    
+    if (response.success) {
+      toast.success("Project deleted successfully");
+      fetchProjects(); // This function should be defined in your component
+    } else {
+      toast.error(response.message || "Failed to delete project");
     }
-  };
+  } catch (error: any) {
+    toast.error(error.message || "Failed to delete project");
+  } finally {
+    setIsDeleting(false);
+    setDeleteProjectId(null);
+  }
+};
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -448,16 +398,6 @@ export default function ProjectsList({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Current Page</CardTitle>
-            <Hash className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{projects.length}</div>
-            <p className="text-xs text-muted-foreground">Projects shown</p>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -566,111 +506,108 @@ export default function ProjectsList({
           ) : (
             <>
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleSortChange("name")}
-                    >
-                      Project Name{" "}
-                      {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead>Product Link</TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleSortChange("total_subreddits")}
-                    >
-                      Total Subreddits{" "}
-                      {sortBy === "total_subreddits" &&
-                        (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleSortChange("total_mentions")}
-                    >
-                      Total Mentions{" "}
-                      {sortBy === "total_mentions" &&
-                        (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleSortChange("created_at")}
-                    >
-                      Created{" "}
-                      {sortBy === "created_at" &&
-                        (sortOrder === "asc" ? "↑" : "↓")}
-                    </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {projects.map((project) => (
-                    <TableRow key={project.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center space-x-2">
-                          <span>{project.name}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {project.name || "Member"}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <a
-                          href={project.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline flex items-center"
-                        >
-                          <span className="truncate max-w-[150px]">
-                            {project.link}
-                          </span>
-                          <ExternalLink className="ml-1 h-3 w-3" />
-                        </a>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {project.total_subreddits || 0}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {project.total_mentions || 0}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Calendar className="mr-1 h-3 w-3" />
-                          {new Date(project.created_at).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => onEditProject(project)}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              View Project
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setDeleteProjectId(project.id)}
-                              className="text-red-600"
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete Project
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead
+        className="cursor-pointer hover:bg-gray-50"
+        onClick={() => handleSortChange("name")}
+      >
+        Project Name{" "}
+        {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
+      </TableHead>
+      <TableHead>Product Link</TableHead>
+      <TableHead
+        className="cursor-pointer hover:bg-gray-50"
+        onClick={() => handleSortChange("total_subreddits")}
+      >
+        Total Subreddits{" "}
+        {sortBy === "total_subreddits" &&
+          (sortOrder === "asc" ? "↑" : "↓")}
+      </TableHead>
+      <TableHead
+        className="cursor-pointer hover:bg-gray-50"
+        onClick={() => handleSortChange("total_mentions")}
+      >
+        Total Mentions{" "}
+        {sortBy === "total_mentions" &&
+          (sortOrder === "asc" ? "↑" : "↓")}
+      </TableHead>
+      <TableHead
+        className="cursor-pointer hover:bg-gray-50"
+        onClick={() => handleSortChange("created_at")}
+      >
+        Created{" "}
+        {sortBy === "created_at" &&
+          (sortOrder === "asc" ? "↑" : "↓")}
+      </TableHead>
+      <TableHead className="text-right">Actions</TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    {projects.map((project) => (
+      <TableRow key={project.id}>
+        <TableCell className="font-medium">
+          <div className="flex items-center space-x-2">
+            <span>{project.name}</span>
+            <Badge variant="secondary" className="text-xs">
+              {project.name || "Member"}
+            </Badge>
+          </div>
+        </TableCell>
+        <TableCell>
+          <a
+            href={project.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline flex items-center"
+          >
+            <span className="truncate max-w-[150px]">
+              {project.link}
+            </span>
+            <ExternalLink className="ml-1 h-3 w-3" />
+          </a>
+        </TableCell>
+        <TableCell>
+          <Badge variant="outline">
+            {project.total_subreddits || 0}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Badge variant="outline">
+            {project.total_mentions || 0}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center text-sm text-gray-600">
+            <Calendar className="mr-1 h-3 w-3" />
+            {new Date(project.created_at).toLocaleDateString()}
+          </div>
+        </TableCell>
+        {/* --- MODIFIED ACTIONS CELL --- */}
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEditProject(project)}
+              title="View Project"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteProjectId(project.id)}
+              title="Delete Project"
+            >
+              <Trash className="h-4 w-4 text-red-500" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    ))}
+  </TableBody>
+</Table>
 
               {/* Pagination */}
               {totalPages > 1 && (

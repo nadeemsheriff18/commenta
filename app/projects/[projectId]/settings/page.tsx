@@ -6,12 +6,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "@/components/Layout";
 import ProjectSettings from "@/components/dashboard/ProjectSettings";
 import { apiService, Project } from "@/lib/api";
-
-// Required for static export
-// export async function generateStaticParams() {
-//   // Return empty array for static export - pages will be generated on demand
-//   return [];
-// }
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ProjectSettingsPage() {
   const params = useParams();
@@ -21,23 +17,35 @@ export default function ProjectSettingsPage() {
 
   useEffect(() => {
     const fetchProject = async () => {
-      if (!projectId) return;
-
+      if (!projectId) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
       try {
         const response = await apiService.getProjects();
-        if (response.success && response.data) {
-          const foundProject = response.data.data.find(
-            (p: Project) => p.id === projectId
+        const projectList = response.data?.projects || response.data;
+        if (response.success && Array.isArray(projectList)) {
+          const foundProject = projectList.find(
+            (p: Project) => p.id.toString() === projectId
           );
-          setProject(foundProject || null);
+          if (foundProject) {
+            setProject(foundProject);
+          } else {
+            setProject(null);
+            toast.error(`Project with ID ${projectId} not found.`);
+          }
+        } else {
+          setProject(null);
+          toast.error(response.message || "Failed to fetch project list.");
         }
       } catch (error) {
-        console.error("Failed to fetch project:", error);
+        setProject(null);
+        toast.error("An error occurred while fetching the project.");
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchProject();
   }, [projectId]);
 
@@ -45,8 +53,8 @@ export default function ProjectSettingsPage() {
     return (
       <ProtectedRoute>
         <Layout>
-          <div className="p-6 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="flex h-full w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
           </div>
         </Layout>
       </ProtectedRoute>

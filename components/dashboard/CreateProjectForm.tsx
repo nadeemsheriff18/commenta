@@ -75,7 +75,7 @@ export default function CreateProjectForm({
   const [formData, setFormData] = useState<CreateProjectData>({
     name: "",
     product_link: "",
-    audiance: "",
+    audience: "",
     problem: "",
     solution: "",
     // person_story: "",
@@ -127,8 +127,8 @@ export default function CreateProjectForm({
       }
     }
 
-    if (!formData.audiance.trim()) {
-      newErrors.audiance = "Audiance is required";
+    if (!formData.audience.trim()) {
+      newErrors.audience = "Audiance is required";
     }
 
     if (!formData.name.trim()) {
@@ -147,89 +147,56 @@ export default function CreateProjectForm({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Replace your handleSubmit with this version
 
-    if (!validateForm()) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!validateForm()) return;
 
-    setIsSubmitting(true);
-
-    try {
-      console.log("FORMDATA :: ", formData);
-      const createForm = {
-        name: formData.name,
-        product_link: formData.product_link,
-        product_explanation: {
-          audience: formData.audiance,
-          problem: formData.problem,
-          solution: formData.solution,
-        },
-      };
-      const response = await apiService.createProject(createForm);
-      console.log("projectid ", response.data);
-      if (response.success) {
-        toast.success("Project created successfully");
-        // Clear the API cache to ensure fresh data
-        apiService.clearCache();
-        // Router.replace("/projects/");
-        // onCreateProject(); // This should redirect to project list
-      } else {
-        // Handle specific error messages from backend
-        if (response.message?.includes("Subreddit limit reached")) {
-          toast.error("Subreddit limit reached");
-        } else if (
-          response.message?.includes("Failed to generate subreddits") ||
-          response.message?.includes("Failed to generate keywords")
-        ) {
-          toast.error("Failed to generate subreddits/keywords");
-        } else {
-          toast.error(response.message || "Failed to create project");
-        }
-      }
-    } catch (error) {
-      toast.error("Failed to create project. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleInputChange = (field: keyof CreateProjectData, value: string) => {
-    const wordsArr = value.trim().split(/\s+/);
-    const wordCount = value.trim() === "" ? 0 : wordsArr.length;
-    if (field === "product_link") {
-      try {
-        const urlObj = new URL(value);
-        const hostname = urlObj.hostname.replace("www.", "");
-        const projectName = hostname.split(".")[0];
-
-        setFormData((prev) => ({
-          ...prev,
-          product_link: value,
-          name: prev.name || projectName, // auto-fill only if name is empty
-        }));
-      } catch {
-        setFormData((prev) => ({ ...prev, product_link: value }));
-      }
+  setIsSubmitting(true);
+  try {
+    const createForm = {
+      name: formData.name,
+      product_link: formData.product_link,
+      product_explanation: {
+        audience: formData.audience, // <-- Corrected spelling
+        problem: formData.problem,
+        solution: formData.solution,
+      },
+    };
+    const response = await apiService.createProject(createForm);
+    if (response.success) {
+      toast.success("Project created successfully");
+      onCreateProject();
     } else {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      toast.error(response.message || "Failed to create project");
     }
+  } catch (error: any) {
+    toast.error(error.message || "Failed to create project");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
+  // Replace your handleInputChange with this version
+
+const handleInputChange = (field: keyof CreateProjectData, value: string) => {
+  setFormData((prev) => ({ ...prev, [field]: value }));
+  
+  if (["problem", "audience", "solution"].includes(field)) {
+    const wordCount = value.trim() === "" ? 0 : value.trim().split(/\s+/).length;
     if (wordCount <= MAX_WORDS) {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-      if (["problem", "audiance", "solution"].includes(field)) {
         setWordCounts((prev) => ({ ...prev, [field]: wordCount }));
-      }
     } else {
-      toast.error(`Maximum ${MAX_WORDS} words allowed in ${field}`);
+        toast.error(`Maximum ${MAX_WORDS} words allowed.`);
+        // Optionally, trim the value to the max word count
     }
+  }
 
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-  };
+  if (errors[field]) {
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  }
+};
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -345,11 +312,11 @@ export default function CreateProjectForm({
               <Textarea
                 id="product_audiance"
                 placeholder="Describe your product audiance"
-                value={formData.audiance}
-                onChange={(e) => handleInputChange("audiance", e.target.value)}
+                value={formData.audience}
+                onChange={(e) => handleInputChange("audience", e.target.value)}
                 disabled={isSubmitting}
                 rows={4}
-                className={errors.audiance ? "border-red-500" : ""}
+                className={errors.audience ? "border-red-500" : ""}
               />
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -373,8 +340,8 @@ export default function CreateProjectForm({
                   </Badge>
                 )}
               </div>
-              {errors.audiance && (
-                <p className="text-sm text-red-600">{errors.audiance}</p>
+              {errors.audience && (
+                <p className="text-sm text-red-600">{errors.audience}</p>
               )}
             </div>
 

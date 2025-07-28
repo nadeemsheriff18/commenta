@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, Menu } from "lucide-react";
+import { User, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 
 interface User {
@@ -39,35 +39,21 @@ export default function AppHeader({
   const handlelogout = () => {
     if (onLogout) {
       onLogout();
-      <Link href={`/login`}></Link>;
     }
   };
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">PM</span>
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                ProjectTool
-              </h1>
-              <p className="text-xs text-gray-500 hidden sm:block">
-                Management Suite
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* --- MODIFIED: Changed justify-between to justify-end --- */}
+      <div className="flex items-center justify-end">
+        
+        {/* --- REMOVED: Logo and ProjectTool title section --- */}
 
         <div className="flex items-center space-x-4">
           {user ? (
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                <p className="text-xs text-gray-500">{user.user_id}</p>
+                {/* User ID was removed as requested earlier */}
               </div>
 
               <DropdownMenu>

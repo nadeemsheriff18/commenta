@@ -1,5 +1,8 @@
+"use client";
+
 import Cookies from 'js-cookie';
-import { toast } from 'sonner';
+
+// --- Type Definitions ---
 export interface User {
   user_id: string;
   name: string;
@@ -16,378 +19,144 @@ export interface AuthResponse {
   email?: string;
 }
 
+// --- Self-Contained AuthService Class ---
 class AuthService {
-  private baseUrl = process.env.NEXT_PUBLIC_API_URL ||'http://192.168.43.144:8000' || 'http://localhost:4000' || 'https://fa5e7e8562a4.ngrok-free.app/summa';
+  private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
   private tokenKey = 'auth_token';
   private userKey = 'user_data';
+  private expiryKey = 'token_expiry';
 
-  // Cookie options for secure HTTPS
   private getCookieOptions() {
     return {
-      secure: process.env.NODE_ENV === 'production', // Only use secure in production (HTTPS)
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict' as const,
-      expires: 7, // 7 days
+      expires: 7,
       path: '/'
     };
   }
 
-  async login(email: string, password: string , timezone : string): Promise<AuthResponse> {
+  private handleSuccessfulAuth(data: any): User | null {
+    if (data.token && data.user_id) {
+      const user = { user_id: data.user_id, email: data.email, name: data.name, picture: data.picture };
+      Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
+      Cookies.set(this.userKey, JSON.stringify(user), this.getCookieOptions());
+      if (data.exp) Cookies.set(this.expiryKey, data.exp, this.getCookieOptions());
+      return user;
+    }
+    return null;
+  }
+  
+  async login(email: string, password: string, timezone: string): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/manual_auth`, {
+      const response = await fetch(`${this.baseUrl}/manual_auth`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password , timezone }),
-        credentials: 'include', // Include cookies in requests
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, timezone }),
       });
-
       const data = await response.json();
-      
+      if (!response.ok) return { success: false, message: data.detail || 'Login failed.' };
       if (data.token) {
-          // Store token in secure cookies
-          Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
-
-          // Store user info in cookies
-          Cookies.set(this.userKey, JSON.stringify({
-            user_id: data.user_id,
-            email: data.email,
-            name: data.name,
-            picture: data.picture,
-          }), this.getCookieOptions());
-
-          // Store token expiration (exp) in cookies
-          Cookies.set("token_expiry", data.exp, this.getCookieOptions());
-          console.log("All Cookies:", Cookies.get());
-          return {
-            success: true,
-            message: 'Login successful',
-            user: {
-              user_id: data.user_id,
-              name: data.name,
-              email: data.email,
-              picture: data.picture
-            },
-            token: data.token
-          };
-      } else if (data.message === "verification_email_sent") {
-        return {
-          success: false,
-          message: "Please verify your email before logging in. Check your inbox for the verification link.",
-          requiresVerification: true,
-          email: email
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Login failed'
-        };
+        const user = this.handleSuccessfulAuth(data);
+        return { success: true, message: 'Login successful!', user: user || undefined };
       }
+      if (data.message === 'verification_email_sent') {
+        return { success: false, message: 'Verification email sent.', requiresVerification: true, email };
+      }
+      return { success: false, message: 'An unknown error occurred.' };
     } catch (error) {
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.',
-      };
+      return { success: false, message: 'Network error. Please try again.' };
     }
   }
-   async loginGoogle(data : any): Promise<any> {
+ isTokenExpired(): boolean {
+    const expiry = Cookies.get(this.expiryKey);
+    if (!expiry) return true;
     try {
-      // const response = await fetch(`${this.baseUrl}/auth/manual_auth`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({ email, password , timezone }),
-      //   credentials: 'include', // Include cookies in requests
-      // });
-
-      // const data = await response.json();
-      console.log("Google",data);
-      if (data.token) {
-          // Store token in secure cookies
-          // Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
-          Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
-
-          // Store user info in cookies
-          Cookies.set(this.userKey, JSON.stringify({
-            user_id: data.user_id,
-            email: data.email,
-            name: data.name,
-            picture: data.picture,
-          }), this.getCookieOptions());
-
-          // Store token expiration (exp) in cookies
-          Cookies.set("token_expiry", data.exp, this.getCookieOptions());
-          
-          console.log("------------------------,",Cookies.get(this.tokenKey) );
-          console.log("------------------------,",Cookies.get(this.userKey) );
-          console.log("------------------------,",Cookies.get("token_expiry") );
-          // Store user info in cookies 
-          // Cookies.set(this.userKey, JSON.stringify({
-          //   user_id: data.user_id,
-          //   email: data.email,
-          //   name: data.name,
-          //   picture: data.picture,
-          // }), this.getCookieOptions());
-          
-          // Store token expiration (exp) in cookies
-          // Cookies.set("token_expiry", data.exp, this.getCookieOptions());
-          console.log("All Cookies:", Cookies.get());
-          
-          return {
-            success: true,
-            message: 'Login successful',
-            user: {
-              user_id: data.user_id,
-              name: data.name,
-              email: data.email,
-              picture: data.picture
-            },
-            token: data.token
-          };
-      } else if (data.message === "verification_email_sent") {
-        return {
-          success: false,
-          message: "Please verify your email before logging in. Check your inbox for the verification link.",
-          requiresVerification: true,
-          email: data.email
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Login failed'
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.',
-      };
+      return Date.now() >= new Date(expiry).getTime();
+    } catch {
+      return true;
     }
   }
 
-
-  // async register(name: string, email: string, password: string): Promise<AuthResponse> {
-  //   try {
-  //     const response = await fetch(`${this.baseUrl}/auth/register`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({ name, email, password }),
-  //       credentials: 'include', // Include cookies in requests
-  //     });
-
-  //     const data = await response.json();
-
-  //     if (data.success && data.token) {
-  //       // Store token and user data in secure cookies
-  //       Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
-  //       Cookies.set(this.userKey, JSON.stringify(data.user), this.getCookieOptions());
-  //     }
-
-  //     return data;
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Network error. Please check your connection.',
-  //     };
-  //   }
-  // }
-
-  async verifyToken(): Promise<any> {
+  async verifyToken(): Promise<boolean> {
     const token = this.getToken();
-    const user = this.getStoredUser();
-    console.log('token------------',token);
-    if (!token) {
-      return {
-        success: false,
-        message: 'No authentication token found',
-      };
+    if (!token || this.isTokenExpired()) {
+      return false;
     }
-    // return {
-    //   success:true,
-    //   message:"Token is valid"
-    // }
-    try {
-      // const response = await fetch(`${this.baseUrl}/auth/verify`, {
-      //   method: 'GET',
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      //   credentials: 'include', // Include cookies in requests
-      // });
-
-      // const data = await response.json();
-     const data = token && user ? true : false ;
-      console.log("**********************************",data);
-      if (!data) {
-        this.logout();
-      }
-
-      return data;
-    } catch (error) {
-      // this.logout();
-      return {
-        success: false,
-        message: 'Failed to verify authentication',
-      };
-    }
-  }
-
-  logout(): void {
-    // Remove cookies
-    Cookies.remove(this.tokenKey, { path: '/' });
-    Cookies.remove(this.userKey, { path: '/' });
-    Cookies.remove("token_expiry", { path: '/' });
+    // For this mock setup, we assume if a non-expired token exists, it's valid.
+    // A real production app would make an API call here to a `/verify-token` endpoint.
+    return true;
   }
 
   getStoredUser(): User | null {
+    const userStr = Cookies.get(this.userKey);
     try {
-      const userStr = Cookies.get(this.userKey);
-      if (!userStr) return null;
-      const temp = JSON.parse(userStr);
-      console.log("USER ASDASDASD" , temp );
-      return temp;
+      return userStr ? JSON.parse(userStr) : null;
     } catch {
       return null;
     }
   }
+  // Add these functions inside your AuthService class in auth.ts
 
-  getToken(): string | null {
-  console.log("asdasds"  , Cookies.get(this.tokenKey));
-  return Cookies.get(this.tokenKey) || null;
+// In your AuthService class within src/lib/auth.ts
+
+async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${this.baseUrl}/forgot_password_email?email=${encodeURIComponent(email)}`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || "Request failed.");
+    }
+    return { success: true, message: "Password reset email sent!" };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  }
 }
 
-
-   // Check if token is expired based on backend exp time
-  isTokenExpired(): boolean {
-    const expiry = Cookies.get("token_expiry");
-    console.log("Token expiry time:", expiry);
-    if (!expiry) {
-      return true; // No expiry means token is invalid
+async resetPassword(token: string, new_password: string): Promise<AuthResponse> {
+  try {
+    const response = await fetch(`${this.baseUrl}/reset_password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, new_password }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Password reset failed.');
     }
-    try {
-      const expiryTime = new Date(expiry).getTime();
-      const currentTime = Date.now();
-      return currentTime >= expiryTime;
-
-    } catch (error) {
-      return true; // Invalid expiry format means token is expired
-
-    }
-
+    const user = this.handleSuccessfulAuth(data);
+    return { success: true, message: 'Password reset successful!', user: user || undefined };
+  } catch (error: any) {
+    return { success: false, message: error.message };
   }
-  // Check if running in secure context (HTTPS)
-  isSecureContext(): boolean {
-    return typeof window !== 'undefined' && 
-           (window.location.protocol === 'https:' || 
-            window.location.hostname === 'localhost');
-  }
-
+}
   async verifyEmail(token: string): Promise<AuthResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/auth/verify_email?token=${token}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
+  try {
+    const response = await fetch(`${this.baseUrl}/verify_email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await response.json();
 
-      const data = await response.json();
-
-      if (data.token) {
-        // Store token and user data in secure cookies
-        Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
-        Cookies.set(this.userKey, JSON.stringify({
-          user_id: data.user_id,
-          email: data.email,
-          name: data.name,
-          picture: data.picture,
-        }), this.getCookieOptions());
-        Cookies.set("token_expiry", data.exp, this.getCookieOptions());
-
-        return {
-          success: true,
-          message: 'Email verified successfully',
-          user: {
-           user_id: data.user_id,
-            name: data.name,
-            email: data.email,
-            picture: data.picture
-          },
-          token: data.token
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Email verification failed'
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.',
-      };
+    if (!response.ok) {
+      throw new Error(data.detail || 'Verification failed.');
     }
+
+    const user = this.handleSuccessfulAuth(data);
+    return { success: true, message: 'Email verified!', user: user || undefined };
+    
+  } catch (error: any) {
+    return { success: false, message: error.message };
   }
-
-  async resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/auth/resend_verification_email?email=${email}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-      
-      return {
-        success: data.message === 'verification_email_sent',
-        message: data.message === 'verification_email_sent' ? 'Verification email sent successfully' : data.message
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.',
-      };
-    }
-  }
-
+}
   async initiateGoogleAuth(): Promise<{ success: boolean; url?: string; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
+      const response = await fetch(`${this.baseUrl}/auth`);
       const data = await response.json();
-      console.log(data);
-      
-      if (response.ok && data.url) {
-        return {
-          success: true,
-          url: data.url,
-          message: 'OAuth URL retrieved successfully'
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Failed to get OAuth URL'
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.'
-      };
+      if (!response.ok) throw new Error(data.detail || 'Failed to get OAuth URL');
+      return { success: true, url: data.url, message: 'OAuth URL retrieved successfully' };
+    } catch (error: any) {
+      return { success: false, message: error.message };
     }
   }
 
@@ -395,201 +164,34 @@ class AuthService {
     try {
       const response = await fetch(`${this.baseUrl}/auth_callback`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, timezone }),
-        credentials: 'include',
       });
-
       const data = await response.json();
-      
-      if (response.ok && data.token) {
-        // Store token and user data in secure cookies
-        Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
-        Cookies.set(this.userKey, JSON.stringify({
-          user_id: data.user_id,
-          email: data.email,
-          name: data.name,
-          picture: data.picture,
-        }), this.getCookieOptions());
-        Cookies.set("token_expiry", data.exp, this.getCookieOptions());
-
-        return {
-          success: true,
-          message: 'Google authentication successful',
-          user: {
-            user_id: data.user_id,
-            name: data.name,
-            email: data.email,
-            picture: data.picture
-          },
-          token: data.token
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Google authentication failed'
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.'
-      };
+      if (!response.ok) throw new Error(data.detail || "Google auth failed.");
+      const user = this.handleSuccessfulAuth(data);
+      return { success: true, message: "Google login successful!", user: user || undefined };
+    } catch (error: any) {
+      return { success: false, message: error.message };
     }
   }
-
-  // async initiateGoogleAuth(): Promise<{ success: boolean; url?: string; message: string }> {
-  //   try {
-  //     const response = await fetch(`${this.baseUrl}/auth`, {
-  //       method: 'GET',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       credentials: 'include',
-  //     });
-
-  //     const data = await response.json();
-      
-  //     if (response.ok && data.url) {
-  //       return {
-  //         success: true,
-  //         url: data.url,
-  //         message: 'OAuth URL retrieved successfully'
-  //       };
-  //     } else {
-  //       return {
-  //         success: false,
-  //         message: data.message || 'Failed to get OAuth URL'
-  //       };
-  //     }
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Network error. Please check your connection.'
-  //     };
-  //   }
-  // }
-
-  // async handleGoogleCallback(code: string, timezone: string): Promise<AuthResponse> {
-  //   try {
-  //     const response = await fetch(`${this.baseUrl}/auth_callback`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({ code, timezone }),
-  //       credentials: 'include',
-  //     });
-
-  //     const data = await response.json();
-      
-  //     if (response.ok && data.token) {
-  //       // Store token and user data in secure cookies
-  //       Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
-  //       Cookies.set(this.userKey, JSON.stringify({
-  //         id: data.user_id,
-  //         name: data.name,
-  //         email: data.email,
-  //         picture: data.picture,
-  //       }), this.getCookieOptions());
-  //       Cookies.set("token_expiry", data.exp, this.getCookieOptions());
-
-  //       return {
-  //         success: true,
-  //         message: 'Google authentication successful',
-  //         user: {
-  //           id: data.user_id,
-  //           name: data.name,
-  //           email: data.email,
-  //           picture: data.picture
-  //         },
-  //         token: data.token
-  //       };
-  //     } else {
-  //       return {
-  //         success: false,
-  //         message: data.message || 'Google authentication failed'
-  //       };
-  //     }
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Network error. Please check your connection.'
-  //     };
-  //   }
-  // }
-
-  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/auth/forgot_password_email?email=${email}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-      
-      return {
-        success: data.message === 'password_reset_email_sent',
-        message: data.message === 'password_reset_email_sent' ? 'Password reset email sent successfully' : data.message
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.',
-      };
-    }
+  
+  logout(): void {
+    Cookies.remove(this.tokenKey, { path: '/' });
+    Cookies.remove(this.userKey, { path: '/' });
+    Cookies.remove(this.expiryKey, { path: '/' });
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<AuthResponse> {
+  getToken(): string | null {
+    return Cookies.get(this.tokenKey) || null;
+  }
+
+  getUser(): User | null {
+    const userStr = Cookies.get(this.userKey);
     try {
-      const response = await fetch(`${this.baseUrl}/auth/reset_password?token=${token}&new_password=${newPassword}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-
-      if (data.token) {
-        // Store token and user data in secure cookies
-        Cookies.set(this.tokenKey, data.token, this.getCookieOptions());
-        Cookies.set(this.userKey, JSON.stringify({
-          user_id: data.user_id,
-          email: data.email,
-          name: data.name,
-          picture: data.picture,
-        }), this.getCookieOptions());
-        Cookies.set("token_expiry", data.exp, this.getCookieOptions());
-
-        return {
-          success: true,
-          message: 'Password reset successful',
-          user: {
-            user_id: data.user_id,
-            name: data.name,
-            email: data.email,
-            picture: data.picture
-          },
-          token: data.token
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Password reset failed'
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Network error. Please check your connection.',
-      };
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
     }
   }
 }

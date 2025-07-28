@@ -1,5 +1,4 @@
 "use client";
-"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -11,17 +10,15 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Users,
   CreditCard,
-  Settings,
-  Shield,
-  RefreshCw,
   Loader2,
   ExternalLink,
-  Calendar,
-  TrendingUp,
+  Hash,
   MessageSquare,
+  CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiService, AccountDetails, SubscriptionPlan } from "@/lib/api";
@@ -30,78 +27,46 @@ export default function Accounts() {
   const [accountData, setAccountData] = useState<AccountDetails | null>(null);
   const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState<number | null>(null);
 
-  // Fetch account data from API
-  const fetchAccountData = async (showRefreshLoader = false) => {
-    if (showRefreshLoader) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
-
+  const fetchData = async () => {
+    setIsLoading(true);
     try {
-      const response = await apiService.getAccountDetails();
-      console.log("ACCOUNTS : ", response);
-      console.log("ACCOUNTS --- : ", response.data.data);
-      if (response.success && response.data.data) {
-        setAccountData(response.data.data);
+      // Fetch both account details and available plans in parallel
+      const [detailsResponse, plansResponse] = await Promise.all([
+        apiService.getAccountDetails(),
+        apiService.getAvailablePlans(),
+      ]);
+
+      // --- CORRECTED: Access data directly from response.data ---
+      if (detailsResponse.success && detailsResponse.data) {
+        setAccountData(detailsResponse.data);
       } else {
-        toast.error(response.message || "Failed to fetch account data");
+        toast.error(detailsResponse.message || "Failed to fetch account data");
+      }
+
+      if (plansResponse.success && Array.isArray(plansResponse.data)) {
+        setAvailablePlans(plansResponse.data);
+      } else {
+        toast.error(plansResponse.message || "Failed to fetch available plans");
       }
     } catch (error) {
-      toast.error("Failed to fetch account data");
+      toast.error("An error occurred while loading account information.");
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   };
 
-  // Fetch available plans
-  const fetchAvailablePlans = async () => {
-    try {
-      const response = await apiService.getAvailablePlans();
-      console.log("AVAILABLE PLANS ; ", response);
-      console.log("AVAILABLE PLANS-------- ; ", response.data.data);
-      if (response.success && response.data.data) {
-        setAvailablePlans(response.data.data);
-      } else {
-        console.error("Failed to fetch available plans:", response.message);
-      }
-    } catch (error) {
-      console.error("Failed to fetch available plans:", error);
-    }
-  };
-
-  // Initial data fetch
   useEffect(() => {
-    fetchAccountData();
-    fetchAvailablePlans();
+    fetchData();
   }, []);
 
-  // Auto-refresh every 5 minutes
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     fetchAccountData();
-  //   }, 5 * 60 * 1000);
-
-  //   return () => clearInterval(interval);
-  // }, []);
-
-  const handleRefresh = () => {
-    fetchAccountData(true);
-  };
-
   const handleUpgradePlan = async (planId: number) => {
-    setIsUpgrading(true);
+    setIsUpgrading(planId);
     try {
       const response = await apiService.getPaymentUrl(planId);
-      console.log("PAYMENT url :", response);
-      console.log("PAYMENT url ---- :", response.data.data);
-      if (response.success && response.data.data) {
-        // Open payment URL in new tab
-        window.open(response.data.data.url, "_blank");
+      if (response.success && response.data?.url) {
+        window.open(response.data.url, "_blank");
         toast.success("Redirecting to payment gateway...");
       } else {
         toast.error(response.message || "Failed to get payment URL");
@@ -109,377 +74,132 @@ export default function Accounts() {
     } catch (error) {
       toast.error("Failed to initiate payment");
     } finally {
-      setIsUpgrading(false);
+      setIsUpgrading(null);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₹${amount}`;
-  };
-
   const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+      year: "numeric", month: "long", day: "numeric",
     });
   };
 
   const getUsagePercentage = (used: number, max: number) => {
-    return max > 0 ? Math.round((used / max) * 100) : 0;
+    if (!used || !max || max === 0) return 0;
+    return Math.round((used / max) * 100);
   };
 
-  if (isLoading && !accountData) {
+  const UsageCard = ({ title, icon, used, max, unit }: { title: string, icon: React.ReactNode, used: number, max: number, unit: string }) => {
+    const percentage = getUsagePercentage(used, max);
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600 mb-4" />
-            <p className="text-gray-600">Loading account information...</p>
-          </div>
-        </div>
+        <Card className="shadow-sm">
+            <CardHeader>
+                <div className="flex items-center space-x-3">
+                    {icon}
+                    <CardTitle className="text-lg">{title}</CardTitle>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+                <p className="text-2xl font-bold">{used} <span className="text-base font-normal text-muted-foreground">/ {max} {unit}</span></p>
+                <Progress value={percentage} />
+                <p className="text-xs text-muted-foreground">{percentage}% of your limit used</p>
+            </CardContent>
+        </Card>
+    );
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Account Management
-          </h1>
-          <p className="text-gray-600">
-            Manage your subscription, billing, and account settings
-          </p>
+    <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/50 min-h-full space-y-8">
+        <div className="max-w-7xl mx-auto">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900">Account Management</h1>
+                <p className="mt-1 text-gray-600">Manage your subscription, billing, and account settings.</p>
+            </div>
+
+            <Card className="mt-8 shadow-sm">
+                <CardHeader>
+                    <CardTitle className="flex items-center text-xl"><Users className="mr-3 h-5 w-5" /> Account Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+                        <div>
+                            <p className="font-medium text-gray-500">Name</p>
+                            <p className="font-semibold text-gray-900">{accountData?.name}</p>
+                        </div>
+                        <div>
+                            <p className="font-medium text-gray-500">Email</p>
+                            <p className="font-semibold text-gray-900">{accountData?.email}</p>
+                        </div>
+                        <div>
+                            <p className="font-medium text-gray-500">Current Plan</p>
+                            <p className="font-semibold text-gray-900 capitalize">{accountData?.plan_name}</p>
+                        </div>
+                        <div>
+                            <p className="font-medium text-gray-500">Status</p>
+                            <Badge variant={accountData?.is_expired ? "destructive" : "default"} className="bg-green-100 text-green-800">{accountData?.is_expired ? "Expired" : "Active"}</Badge>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <UsageCard 
+                    title="Subreddits"
+                    icon={<Hash className="h-5 w-5 text-indigo-600" />}
+                    used={accountData?.active_subreds || 0}
+                    max={accountData?.max_subreds || 0}
+                    unit="tracked"
+                />
+                <UsageCard 
+                    title="Comments"
+                    icon={<MessageSquare className="h-5 w-5 text-indigo-600" />}
+                    used={accountData?.comments_count || 0}
+                    max={accountData?.max_comments || 0}
+                    unit="per day"
+                />
+            </div>
+            
+            <div className="mt-12">
+                <h2 className="text-2xl font-bold tracking-tight text-gray-900">Available Plans</h2>
+                <p className="mt-1 text-gray-600">Upgrade your plan to unlock more features and increase your limits.</p>
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+                    {availablePlans.map((plan) => (
+                        <Card key={plan.id} className="flex flex-col shadow-sm hover:shadow-lg transition-shadow">
+                            <CardHeader>
+                                <div className="flex justify-between items-center">
+                                    <CardTitle className="text-xl capitalize">{plan.name}</CardTitle>
+                                    <Badge variant="outline" className="text-base">₹{plan.cost}</Badge>
+                                </div>
+                                <CardDescription>{plan.descrip}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-grow space-y-4">
+                                <ul className="space-y-2 text-sm text-gray-600">
+                                    <li className="flex items-center"><CheckCircle className="h-4 w-4 mr-2 text-green-600"/>{plan.subreddit_count} Subreddits</li>
+                                    <li className="flex items-center"><CheckCircle className="h-4 w-4 mr-2 text-green-600"/>{plan.comments_per_day} Comments/day</li>
+                                    <li className="flex items-center"><CheckCircle className="h-4 w-4 mr-2 text-green-600"/>{plan.kb_max_size}MB Knowledge Base</li>
+                                </ul>
+                            </CardContent>
+                            <CardContent>
+                                <Button className="w-full bg-indigo-600 hover:bg-indigo-700" onClick={() => handleUpgradePlan(plan.id)} disabled={isUpgrading === plan.id}>
+                                    {isUpgrading === plan.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
+                                    Upgrade to {plan.name}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
         </div>
-        {/* <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-        </Button> */}
-      </div>
-
-      {/* Account Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Users className="mr-2 h-5 w-5" />
-            Account Overview
-          </CardTitle>
-          <CardDescription>
-            Your current account status and plan information
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-medium text-gray-900 mb-2">
-                Account Details
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium">Name:</span> {accountData?.name}
-                </div>
-                <div>
-                  <span className="font-medium">Email:</span>{" "}
-                  {accountData?.email}
-                </div>
-                <div>
-                  <span className="font-medium">Plan:</span>
-                  <Badge
-                    variant={
-                      accountData?.is_expired ? "destructive" : "secondary"
-                    }
-                    className="ml-2"
-                  >
-                    {accountData?.plan_name}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-medium text-gray-900 mb-2">Plan Status</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium">Status:</span>
-                  <Badge
-                    variant={
-                      accountData?.is_expired ? "destructive" : "default"
-                    }
-                    className="ml-2"
-                  >
-                    {accountData?.is_expired ? "Expired" : "Active"}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="font-medium">Expires on:</span>{" "}
-                  {accountData?.expires_on
-                    ? formatDate(accountData.expires_on)
-                    : "N/A"}
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <CreditCard className="h-5 w-5 text-blue-600" />
-                <CardTitle className="text-lg">Current Plan</CardTitle>
-              </div>
-              <Badge
-                variant={accountData?.is_expired ? "destructive" : "secondary"}
-              >
-                {accountData?.plan_name}
-              </Badge>
-            </div>
-            <CardDescription>
-              Your current subscription plan and billing information
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium">Plan Status</p>
-              <p className="text-sm text-gray-600">
-                {accountData?.is_expired ? "Expired" : "Active"}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Expires on</p>
-              <p className="text-sm text-gray-600">
-                {accountData?.expires_on
-                  ? formatDate(accountData.expires_on)
-                  : "N/A"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <CardTitle className="text-lg">Subreddits</CardTitle>
-            </div>
-            <CardDescription>Your subreddit monitoring usage</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium">Active subreddits</p>
-              <p className="text-sm text-gray-600">
-                {accountData?.active_subreds} of {accountData?.max_subreds} used
-              </p>
-            </div>
-            <div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-600 h-2 rounded-full"
-                  style={{
-                    width: `${
-                      accountData
-                        ? getUsagePercentage(
-                            accountData.active_subreds,
-                            accountData.max_subreds
-                          )
-                        : 0
-                    }%`,
-                  }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {accountData
-                  ? getUsagePercentage(
-                      accountData.active_subreds,
-                      accountData.max_subreds
-                    )
-                  : 0}
-                % used
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <MessageSquare className="h-5 w-5 text-purple-600" />
-              <CardTitle className="text-lg">Comments</CardTitle>
-            </div>
-            <CardDescription>
-              Your daily comment generation usage
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium">Comments generated</p>
-              <p className="text-sm text-gray-600">
-                {accountData?.comments_count} of {accountData?.max_comments}{" "}
-                today
-              </p>
-            </div>
-            <div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-purple-600 h-2 rounded-full"
-                  style={{
-                    width: `${
-                      accountData
-                        ? getUsagePercentage(
-                            accountData.comments_count,
-                            accountData.max_comments
-                          )
-                        : 0
-                    }%`,
-                  }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {accountData
-                  ? getUsagePercentage(
-                      accountData.comments_count,
-                      accountData.max_comments
-                    )
-                  : 0}
-                % used
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Shield className="mr-2 h-5 w-5" />
-            Knowledge Base Usage
-          </CardTitle>
-          <CardDescription>Your knowledge base storage usage</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm">
-                <span>
-                  Storage used: {accountData?.kb_size} MB of{" "}
-                  {accountData?.max_kb_size} MB
-                </span>
-                <span>
-                  {accountData
-                    ? getUsagePercentage(
-                        accountData.kb_size,
-                        accountData.max_kb_size
-                      )
-                    : 0}
-                  %
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full"
-                  style={{
-                    width: `${
-                      accountData
-                        ? getUsagePercentage(
-                            accountData.kb_size,
-                            accountData.max_kb_size
-                          )
-                        : 0
-                    }%`,
-                  }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Available Plans */}
-      {availablePlans.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <CreditCard className="mr-2 h-5 w-5" />
-              Available Plans
-            </CardTitle>
-            <CardDescription>
-              Upgrade your plan to get more features and higher limits
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {availablePlans.map((plan) => (
-                <Card
-                  key={plan.id}
-                  className="border-2 hover:border-blue-500 transition-colors"
-                >
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{plan.name}</CardTitle>
-                      <Badge variant="outline">
-                        {formatCurrency(plan.cost)}
-                      </Badge>
-                    </div>
-                    <CardDescription>{plan.descrip}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Duration:</span>
-                        <span>{plan.duration_in_days} days</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Subreddits:</span>
-                        <span>{plan.subreddit_count}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Comments/day:</span>
-                        <span>{plan.comments_per_day}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>KB Storage:</span>
-                        <span>{plan.kb_max_size} MB</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Update frequency:</span>
-                        <span>{plan.time_gap} min</span>
-                      </div>
-                    </div>
-                    <Button
-                      className="w-full"
-                      onClick={() => handleUpgradePlan(plan.id)}
-                      disabled={isUpgrading}
-                    >
-                      {isUpgrading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Upgrade to {plan.name}
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
