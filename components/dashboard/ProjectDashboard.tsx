@@ -79,15 +79,15 @@ const fetchMentions = useCallback(
         default: response = await apiService.getActedMentions({ ...params, ment_type: activeTab }); break;
       }
 
-      // --- CORRECTED: The mentions list is directly in response.data ---
-      if (response.success && Array.isArray(response.data)) {
-        setMentions(response.data); 
+      // --- CORRECTED: The mentions list and pagination are in response.data ---
+      if (response.success && response.data) {
+        setMentions(response.data.ments || []); 
         
-        if (response.pagination) {
-          setTotalPages(response.pagination.totalPages);
-          setTotalMentions(response.pagination.total);
-          setCurrentPage(response.pagination.page);
-        }
+        const totalMentionsFromServer = response.data.total || 0;
+        setTotalMentions(totalMentionsFromServer);
+        setTotalPages(Math.ceil(totalMentionsFromServer / pageSize));
+        setCurrentPage(page);
+
       } else {
         setMentions([]);
         toast.error(response.message || "Failed to fetch mentions");
