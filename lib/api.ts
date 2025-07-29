@@ -125,7 +125,13 @@ export interface ProjectStats {
 }
 
 // Data Transfer Interfaces
-export interface PaginationParams { page?: number; limit?: number; search?: string; }
+export interface PaginationParams { 
+  page?: number; 
+  limit?: number; 
+  search?: string; 
+  sortBy?: string; 
+  sortOrder?: 'asc' | 'desc';
+}
 export interface CreateProjectData {
   name: string;
   product_link: string;
@@ -214,7 +220,17 @@ async generateExplain(url: string): Promise<ApiResponse<any>> {
 
   // SUBREDDITS & KEYWORDS
   async listSubreddits(proj_id: string) { return this.makeRequest<SubredditInfo[]>(`/list_subreddits?proj_id=${proj_id}`); }
-  async searchSubreddits(search: string) { return this.makeRequest<SubredditInfo[]>(`/search_subreddits?search=${search}`); }
+  async searchSubreddits(search: string, params?: PaginationParams): Promise<ApiResponse<SubredditInfo[]>> {
+  const queryParams = new URLSearchParams();
+  queryParams.append('search', search);
+
+  // Add the limit to the URL if it's provided
+  if (params?.limit) {
+    queryParams.append('limit', params.limit.toString());
+  }
+  
+  return this.makeRequest<SubredditInfo[]>(`/search_subreddits?${queryParams.toString()}`);
+}
   async addSubreddits(data: AddSubredditsData) { return this.makeRequest('/add_subreddits', { method: 'POST', body: JSON.stringify(data) }); }
   async deleteSubreddits(data: DeleteSubredditsData) { return this.makeRequest('/del_subreddits', { method: 'POST', body: JSON.stringify(data) }); }
   async getKeywords(projId: string) { return this.makeRequest<{keyword: string[]}>(`/list_keywords?proj_id=${projId}`); }
