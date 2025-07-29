@@ -31,24 +31,30 @@ const defaultProject: Project = {
   created_at: new Date().toISOString(),
 };
 
+// --- MODIFIED: dummySettings now matches the nested ProjectSettingsType ---
 const dummySettings: ProjectSettingsType = {
     name: "FameWall (Preview)",
     prod_url: "https://example.com/my-awesome-product",
-    problem: "Users need a simple and effective way to track online brand mentions without dealing with complex and expensive enterprise tools.",
-    audience: "Designed for indie hackers, startups, and small marketing teams who need to stay on top of their online presence.",
-    solution: "Our tool provides a clean, intuitive dashboard to monitor keywords and subreddits for relevant conversations, with AI-powered comment generation to save time."
+    prod_info: {
+        problem: "Users need a simple and effective way to track online brand mentions without dealing with complex and expensive enterprise tools.",
+        audience: "Designed for indie hackers, startups, and small marketing teams who need to stay on top of their online presence.",
+        solution: "Our tool provides a clean, intuitive dashboard to monitor keywords and subreddits for relevant conversations, with AI-powered comment generation to save time."
+    }
 };
 
 export default function ProjectSettings({ project: projectProp }: ProjectSettingsProps) {
   const project = projectProp || defaultProject;
   const router = useRouter();
 
+  // --- MODIFIED: Initial state now matches the nested ProjectSettingsType ---
   const [formData, setFormData] = useState<ProjectSettingsType>({
     name: "",
     prod_url: "",
-    solution: "",
-    audience: "",
-    problem: "",
+    prod_info: {
+      problem: "",
+      audience: "",
+      solution: "",
+    },
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -63,16 +69,9 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
     try {
       const response = await apiService.getProjectSettings(projectProp.id);
 
+      // --- MODIFIED: No need to flatten the data ---
       if (response.success && response.data) {
-        const settings = response.data;
-        const flattenedData = {
-          name: settings.name,
-          prod_url: settings.prod_url,
-          problem: settings.prod_info.problem,
-          audience: settings.prod_info.audience,
-          solution: settings.prod_info.solution,
-        };
-        setFormData(flattenedData);
+        setFormData(response.data);
       } else {
         toast.error(response.message || "Failed to fetch project settings");
       }
@@ -110,7 +109,6 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
           </Button>
         </div>
 
-        {/* --- MODIFIED: Added shadow effect and transition --- */}
         <Card className="max-w-4xl mx-auto shadow-lg hover:shadow-xl transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-2xl">{project.name} Settings</CardTitle>
@@ -119,7 +117,6 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* --- MODIFIED: Increased font sizes --- */}
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t pt-6">
                 <div className="md:col-span-1">
@@ -141,12 +138,13 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
                 </div>
               </div>
               
+              {/* --- MODIFIED: Accessing nested prod_info properties --- */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t pt-6">
                 <div className="md:col-span-1">
                   <h3 className="font-semibold text-gray-900">Problem</h3>
                 </div>
                 <div className="md:col-span-3">
-                  <p className="text-gray-800 whitespace-pre-wrap">{formData.problem}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap">{formData.prod_info.problem}</p>
                 </div>
               </div>
 
@@ -155,7 +153,7 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
                   <h3 className="font-semibold text-gray-900">Audience</h3>
                 </div>
                 <div className="md:col-span-3">
-                  <p className="text-gray-800 whitespace-pre-wrap">{formData.audience}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap">{formData.prod_info.audience}</p>
                 </div>
               </div>
 
@@ -164,7 +162,7 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
                   <h3 className="font-semibold text-gray-900">Solution</h3>
                 </div>
                 <div className="md:col-span-3">
-                  <p className="text-gray-800 whitespace-pre-wrap">{formData.solution}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap">{formData.prod_info.solution}</p>
                 </div>
               </div>
             </div>
