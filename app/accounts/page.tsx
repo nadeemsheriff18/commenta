@@ -1,3 +1,6 @@
+export default function Accounts() {
+}
+{/*
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -202,3 +205,4 @@ export default function Accounts() {
     </div>
   );
 }
+  */}
