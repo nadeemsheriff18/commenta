@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -11,14 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Plus,
   Edit,
@@ -30,6 +28,7 @@ import {
   MessageSquare,
   Loader2,
   Search,
+  CheckCircle2,
 } from "lucide-react";
 import {
   Table,
@@ -40,12 +39,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -55,19 +48,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { apiService, Project, PaginationParams } from "@/lib/api";
+import { apiService, Project, ProjectListingResponse } from "@/lib/api";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/use-debounce";
-import LoginPage from "../auth/LoginPage";
 
 interface ProjectsListProps {
   onCreateProject: () => void;
@@ -84,57 +67,31 @@ export default function ProjectsList({
   const [isLoading, setIsLoading] = useState(true);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalProjects, setTotalProjects] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [loading, setLoading] = useState(true);
-  // Search and sorting state
+  const [stats, setStats] = useState<Omit<ProjectListingResponse, 'projects'> | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("created_at");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-
-  // Debounce search term to avoid too many API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const router = useRouter();
-  useEffect(() => {
-    if (!loading && projects.length === 0) {
-      router.push("/projects/create");
-    }
-  }, [loading, projects]);
+  const pathname = usePathname();
 
-  // Fetch projects with pagination
-  const fetchProjects = useCallback(
-  async (params?: Partial<PaginationParams>) => {
+  const fetchProjects = useCallback(async () => {
     setIsLoading(true);
     try {
-      const requestParams: PaginationParams = {
-        page: currentPage,
-        limit: pageSize,
-        search: debouncedSearchTerm || undefined,
-        sortBy,
-        sortOrder,
-        ...params,
-      };
-
-      const response = await apiService.getProjects(requestParams);
-
+      const response = await apiService.getProjects({ search: debouncedSearchTerm || undefined });
       if (response.success && response.data) {
-        // Correctly access the nested 'projects' array
         setProjects(response.data.projects || []);
-        
-        // You would also set your stats here if you add a state for them
-        // Example: setStats({ total_mentions: response.data.total_mentions, ... });
-
-        // Correctly set the total number of projects for pagination
-        setTotalProjects(response.data.total_projects || 0);
-
+        setStats({
+            total_projects: response.data.total_projects,
+            total_mentions: response.data.total_mentions,
+            total_subreddits: response.data.total_subreddits,
+            total_completed: response.data.total_completed,
+        });
+        if (response.data.total_projects === 0 && !debouncedSearchTerm && pathname === '/projects') {
+            router.push("/projects/create");
+        }
       } else {
         setProjects([]);
         if (response.message?.includes("User not found")) {
-            toast.error("User not found. Please log in again.");
+            toast.error("User session invalid. Please log in again.");
             if (onUserNotFound) onUserNotFound();
         }
       }
@@ -143,550 +100,136 @@ export default function ProjectsList({
       setProjects([]);
     } finally {
       setIsLoading(false);
-      setLoading(false); // Make sure to set this to false
     }
-  },
-  [currentPage, pageSize, debouncedSearchTerm, sortBy, sortOrder, onUserNotFound]
-);
+  }, [debouncedSearchTerm, onUserNotFound, router, pathname]);
 
-  // Fetch projects when dependencies change
-  // useEffect(() => {
-  //   fetchProjects();
-  // }, [fetchProjects]);
-
-  // Reset to first page when search term changes
   useEffect(() => {
-    if (debouncedSearchTerm !== searchTerm) return; // Only reset when debounced value changes
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    } else {
-      fetchProjects({ page: 1 });
-    }
-  }, [debouncedSearchTerm]);
+    fetchProjects();
+  }, [fetchProjects]);
 
- const handleDeleteProject = async (projectId: string) => {
-  setIsDeleting(true);
-  try {
-    const response = await apiService.deleteProject({ proj_id: Number(projectId) });
-    
-    if (response.success) {
-      toast.success("Project deleted successfully");
-      fetchProjects(); // This function should be defined in your component
-    } else {
-      toast.error(response.message || "Failed to delete project");
+  const handleDeleteProject = async (projectId: string) => {
+    if (!projectId) return;
+    setIsDeleting(true);
+    try {
+      const response = await apiService.deleteProject({ proj_id: Number(projectId) });
+      if (response.success) {
+        toast.success("Project deleted successfully");
+        fetchProjects();
+      } else {
+        toast.error(response.message || "Failed to delete project");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete project");
+    } finally {
+      setIsDeleting(false);
+      setDeleteProjectId(null);
     }
-  } catch (error: any) {
-    toast.error(error.message || "Failed to delete project");
-  } finally {
-    setIsDeleting(false);
-    setDeleteProjectId(null);
-  }
-};
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
   };
 
-  const handlePageSizeChange = (newPageSize: string) => {
-    setPageSize(parseInt(newPageSize));
-    setCurrentPage(1); // Reset to first page when changing page size
-  };
-
-  const handleSortChange = (newSortBy: string) => {
-    if (newSortBy === sortBy) {
-      // Toggle sort order if same field
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(newSortBy);
-      setSortOrder("desc"); // Default to desc for new field
-    }
-    setCurrentPage(1); // Reset to first page when changing sort
-  };
-
-  // Generate pagination items
-  const generatePaginationItems = () => {
-    const items = [];
-    const maxVisiblePages = 5;
-
-    if (totalPages <= maxVisiblePages) {
-      // Show all pages if total is small
-      for (let i = 1; i <= totalPages; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              onClick={() => handlePageChange(i)}
-              isActive={currentPage === i}
-              className="cursor-pointer"
-            >
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-    } else {
-      // Show first page
-      items.push(
-        <PaginationItem key={1}>
-          <PaginationLink
-            onClick={() => handlePageChange(1)}
-            isActive={currentPage === 1}
-            className="cursor-pointer"
-          >
-            1
-          </PaginationLink>
-        </PaginationItem>
-      );
-
-      // Show ellipsis if needed
-      if (currentPage > 3) {
-        items.push(
-          <PaginationItem key="ellipsis1">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-
-      // Show pages around current page
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
-
-      for (let i = start; i <= end; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              onClick={() => handlePageChange(i)}
-              isActive={currentPage === i}
-              className="cursor-pointer"
-            >
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-
-      // Show ellipsis if needed
-      if (currentPage < totalPages - 2) {
-        items.push(
-          <PaginationItem key="ellipsis2">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-
-      // Show last page
-      if (totalPages > 1) {
-        items.push(
-          <PaginationItem key={totalPages}>
-            <PaginationLink
-              onClick={() => handlePageChange(totalPages)}
-              isActive={currentPage === totalPages}
-              className="cursor-pointer"
-            >
-              {totalPages}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-    }
-
-    return items;
-  };
-
-  // Loading state
   if (isLoading && projects.length === 0) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-            <p className="text-gray-600 mt-1">
-              Manage all your projects and their analytics
-            </p>
-          </div>
-          <Button onClick={onCreateProject} className="flex items-center">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Project
-          </Button>
-        </div>
-
-        <Card className="max-w-2xl mx-auto">
-          <CardContent className="text-center py-8">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600 mb-4" />
-            <p className="text-gray-600">Loading your projects...</p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center h-full bg-slate-50/50">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
   }
-
-  // Empty state
-  if (!isLoading && projects.length === 0 && !debouncedSearchTerm) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-            <p className="text-gray-600 mt-1">
-              Manage all your projects and their analytics
-            </p>
-          </div>
-          <Button onClick={onCreateProject} className="flex items-center">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Project
-          </Button>
-        </div>
-
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <Plus className="h-6 w-6 text-blue-600" />
-            </div>
-            <CardTitle>No projects found</CardTitle>
-            <CardDescription>
-              Create your first project to start tracking keywords, monitoring
-              subreddits, and analyzing mentions.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={onCreateProject} size="lg">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Project
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Calculate totals for analytics cards (from current page data)
-  const totalKeywords = projects.reduce(
-    (total, project) => total + (project.total_subreddits || 0),
-    0
-  );
-  const totalMentions = projects.reduce(
-    (total, project) => total + (project.total_mentions || 0),
-    0
-  );
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-          <p className="text-gray-600 mt-1">
-            Manage all your projects and their analytics
-          </p>
-        </div>
-        <Button onClick={onCreateProject} className="flex items-center">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Project
-        </Button>
-      </div>
-
-      {/* Analytics Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Projects
-            </CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalProjects}</div>
-            <p className="text-xs text-muted-foreground">All projects</p>
-          </CardContent>
-        </Card>
-
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Page Subreddits
-            </CardTitle>
-            <Hash className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalKeywords}</div>
-            <p className="text-xs text-muted-foreground">Current page</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Page Mentions</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalMentions}</div>
-            <p className="text-xs text-muted-foreground">Current page</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle>Search and Filter Projects</CardTitle>
-          <CardDescription>Find and sort your projects</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex items-center space-x-2 flex-1">
-              <Search className="h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search projects by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Select value={sortBy} onValueChange={handleSortChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="created_at">Created Date</SelectItem>
-                  <SelectItem value="name">Project Name</SelectItem>
-                  <SelectItem value="total_mentions">Total Mentions</SelectItem>
-                  <SelectItem value="total_subreddits">
-                    Total Subreddits
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={pageSize.toString()}
-                onValueChange={handlePageSizeChange}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 per page</SelectItem>
-                  <SelectItem value="10">10 per page</SelectItem>
-                  <SelectItem value="20">20 per page</SelectItem>
-                  <SelectItem value="50">50 per page</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card> */}
-
-      {/* Projects Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <CardTitle>All Projects</CardTitle>
-              <CardDescription>
-                {debouncedSearchTerm
-                  ? `Search results for "${debouncedSearchTerm}" (${totalProjects} found)`
-                  : `Showing ${projects.length} of ${totalProjects} projects`}
-              </CardDescription>
-            </div>
-            {isLoading && (
-              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {projects.length === 0 && debouncedSearchTerm ? (
-            <div className="text-center py-8">
-              <Search className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No projects found
-              </h3>
-              <p className="text-gray-600">
-                No projects match your search for "{debouncedSearchTerm}". Try a
-                different search term.
+    <TooltipProvider>
+      <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/50 min-h-full">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Projects</h1>
+              <p className="mt-1 text-gray-600">
+                Manage all your projects and their analytics.
               </p>
             </div>
-          ) : (
-            <>
+            <Button onClick={onCreateProject} className="mt-4 md:mt-0 bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Project
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Tooltip>
+                <TooltipTrigger asChild><Card className="shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Projects</CardTitle><Target className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_projects ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipContent><p>The total number of projects in your account.</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild><Card className="shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Mentions</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_mentions ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipContent><p>The total mentions found across all your projects.</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild><Card className="shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Subreddits</CardTitle><Hash className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_subreddits ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipContent><p>The total subreddits being monitored across all projects.</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild><Card className="shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Completed Mentions</CardTitle><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_completed ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipContent><p>The total number of mentions you have marked as 'Completed'.</p></TooltipContent>
+              </Tooltip>
+          </div>
+
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>All Projects</CardTitle>
+              
+            </CardHeader>
+            <CardContent>
               <Table>
-  <TableHeader>
-    <TableRow>
-      <TableHead
-        className="cursor-pointer hover:bg-gray-50"
-        onClick={() => handleSortChange("name")}
-      >
-        Project Name{" "}
-        {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
-      </TableHead>
-      <TableHead>Product Link</TableHead>
-      <TableHead
-        className="cursor-pointer hover:bg-gray-50"
-        onClick={() => handleSortChange("total_subreddits")}
-      >
-        Total Subreddits{" "}
-        {sortBy === "total_subreddits" &&
-          (sortOrder === "asc" ? "↑" : "↓")}
-      </TableHead>
-      <TableHead
-        className="cursor-pointer hover:bg-gray-50"
-        onClick={() => handleSortChange("total_mentions")}
-      >
-        Total Mentions{" "}
-        {sortBy === "total_mentions" &&
-          (sortOrder === "asc" ? "↑" : "↓")}
-      </TableHead>
-      <TableHead
-        className="cursor-pointer hover:bg-gray-50"
-        onClick={() => handleSortChange("created_at")}
-      >
-        Created{" "}
-        {sortBy === "created_at" &&
-          (sortOrder === "asc" ? "↑" : "↓")}
-      </TableHead>
-      <TableHead className="text-right">Actions</TableHead>
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-    {projects.map((project) => (
-      <TableRow key={project.id}>
-        <TableCell className="font-medium">
-          <div className="flex items-center space-x-2">
-            <span>{project.name}</span>
-            <Badge variant="secondary" className="text-xs">
-              {project.name || "Member"}
-            </Badge>
-          </div>
-        </TableCell>
-        <TableCell>
-          <a
-            href={project.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline flex items-center"
-          >
-            <span className="truncate max-w-[150px]">
-              {project.link}
-            </span>
-            <ExternalLink className="ml-1 h-3 w-3" />
-          </a>
-        </TableCell>
-        <TableCell>
-          <Badge variant="outline">
-            {project.total_subreddits || 0}
-          </Badge>
-        </TableCell>
-        <TableCell>
-          <Badge variant="outline">
-            {project.total_mentions || 0}
-          </Badge>
-        </TableCell>
-        <TableCell>
-          <div className="flex items-center text-sm text-gray-600">
-            <Calendar className="mr-1 h-3 w-3" />
-            {new Date(project.created_at).toLocaleDateString()}
-          </div>
-        </TableCell>
-        {/* --- MODIFIED ACTIONS CELL --- */}
-        <TableCell className="text-right">
-          <div className="flex items-center justify-end space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEditProject(project)}
-              title="View Project"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeleteProjectId(project.id)}
-              title="Delete Project"
-            >
-              <Trash className="h-4 w-4 text-red-500" />
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
-    ))}
-  </TableBody>
-</Table>
+                <TableHeader>
+                  <TableRow className="bg-white hover:bg-slate-100">
+                    <TableHead className="text-slate-600">Project Name</TableHead>
+                    <TableHead className="text-slate-600">Product Link</TableHead>
+                    <TableHead className="text-slate-600">Created</TableHead>
+                    <TableHead className="text-right text-slate-600">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {projects.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell className="font-medium text-gray-800">{project.name}</TableCell>
+                      <TableCell>
+                        <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline flex items-center gap-1 text-sm">
+                          <span className="truncate max-w-[150px]">{project.link}</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">{new Date(project.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => onEditProject(project)} title="View Project Dashboard">
+                              <span className="sr-only">View Project Dashboard</span>
+                              <Edit className="h-4 w-4 text-gray-500" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteProjectId(project.id)} title="Delete Project">
+                              <span className="sr-only">Delete Project</span>
+                              <Trash className="h-4 w-4 text-red-500" />
+                          </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    Showing {(currentPage - 1) * pageSize + 1} to{" "}
-                    {Math.min(currentPage * pageSize, totalProjects)} of{" "}
-                    {totalProjects} projects
-                  </div>
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          className={
-                            currentPage === 1
-                              ? "pointer-events-none opacity-50"
-                              : "cursor-pointer"
-                          }
-                        />
-                      </PaginationItem>
-
-                      {generatePaginationItems()}
-
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          className={
-                            currentPage === totalPages
-                              ? "pointer-events-none opacity-50"
-                              : "cursor-pointer"
-                          }
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={!!deleteProjectId}
-        onOpenChange={() => setDeleteProjectId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Are you sure you want to delete this project?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              project and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                deleteProjectId && handleDeleteProject(deleteProjectId)
-              }
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete Project"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog open={!!deleteProjectId} onOpenChange={() => setDeleteProjectId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to delete this project?</AlertDialogTitle>
+              <AlertDialogDescription>This action cannot be undone and will permanently delete the project.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteProjectId && handleDeleteProject(deleteProjectId)} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
+                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Delete Project
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </TooltipProvider>
   );
 }

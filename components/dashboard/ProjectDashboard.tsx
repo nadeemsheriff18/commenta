@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -218,28 +224,89 @@ const fetchMentions = useCallback(
 
   return (
     // --- UI FIX: Main container is now a flex column to fill height ---
+     <TooltipProvider>
     <div className="p-6 space-y-6 flex flex-col h-full">
-      <div>
+      <div className="flex justify-between">
         <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+        <div>
+              <Button variant="outline" size="sm" onClick={handleReloadWithCacheClearing} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Reload
+              </Button>
+            </div>
+            
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Mentions</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.total_mentions}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Subreddits</CardTitle><Hash className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.total_subreddits}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Completed Mentions</CardTitle><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.completed_mentions}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Avg. Relevance</CardTitle><Percent className="h-4 w-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : `${stats?.avg_relevance.toFixed(1)}%`}</div></CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Mentions</CardTitle>
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.total_mentions}</div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>The total number of mentions found for this project.</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Subreddits</CardTitle>
+                <Hash className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.total_subreddits}</div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>The total number of subreddits being monitored.</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed Mentions</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.completed_mentions}</div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>The number of mentions you have marked as 'Completed'.</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Relevance</CardTitle>
+                <Percent className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : `${stats?.avg_relevance.toFixed(1)}%`}
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>The average relevance score of mentions found.</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* --- UI FIX: This Tabs component will grow to fill available space --- */}
@@ -266,12 +333,6 @@ const fetchMentions = useCallback(
         </div>
         {["active", "pinned", "completed", "noise", "ignored"].map((tab) => (
           <TabsContent key={tab} value={tab} className="space-y-4 flex flex-col flex-1">
-            <div className="flex items-center justify-end">
-              <Button variant="outline" size="sm" onClick={handleReloadWithCacheClearing} disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                Reload
-              </Button>
-            </div>
             
             {/* --- UI FIX: This div now handles scrolling and grows to fill space --- */}
             <div className="flex-grow overflow-y-auto space-y-4">
@@ -318,6 +379,8 @@ const fetchMentions = useCallback(
           </TabsContent>
         ))}
       </Tabs>
-    </div>
+      </div>
+  </TooltipProvider>
+    
   );
 }

@@ -86,6 +86,7 @@ export interface ProjectListingResponse {
   total_projects: number;
   total_mentions: number;
   total_subreddits: number;
+  total_completed: number; // <-- ADD THIS LINE
   projects: Project[];
 }
 export interface AccountDetails {

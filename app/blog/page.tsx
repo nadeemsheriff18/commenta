@@ -9,7 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2} from "lucide-react";
+import Link from "next/link";
 import Image from "next/image";
 
 // --- Type Definitions ---
@@ -33,8 +34,8 @@ export default function BlogPage() {
   const [view, setView] = useState<"list" | "post">("list");
   const [isLoading, setIsLoading] = useState(true);
   const [isPostLoading, setIsPostLoading] = useState(false);
-//process.env.NEXT_PUBLIC_API_URL || 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+//process.env.NEXT_PUBLIC_API_URL ||
+  const API_BASE_URL =process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -79,10 +80,20 @@ export default function BlogPage() {
     fetchBlogs();
   }, [fetchBlogs]);
 
+  // --- Main Render Logic ---
   if (view === "post") {
     return (
-      <div className="bg-white min-h-screen">
-        <div className="container mx-auto px-6 py-8 max-w-4xl">
+      <div className="bg-slate-100 min-h-screen">
+        {/* --- ADDED: Navbar for single post view --- */}
+        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b">
+          <div className="container mx-auto px-6 py-3 flex justify-between items-center">
+            <Link href="/" className="flex items-center space-x-2">
+                <img src="/logo.jpg/" className="w-10 h-10"/>
+                <h1 className="text-xl font-bold text-gray-900">Commentta</h1>
+            </Link>
+          </div>
+        </header>
+        <div className="container mx-auto px-6 py-8 max-w-3xl">
           <Button variant="ghost" onClick={() => setView("list")} className="mb-8 -ml-4 text-gray-600 hover:text-gray-900">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to all articles
@@ -95,8 +106,8 @@ export default function BlogPage() {
             <article className="prose lg:prose-lg max-w-none">
               <p className="text-sm text-gray-500">{formatDate(selectedBlog.date)}</p>
               <h1 className="text-4xl font-bold tracking-tight text-gray-900">{selectedBlog.title}</h1>
-              <div className="relative my-8 h-96 w-full bg-gray-200 rounded-lg overflow-hidden">
-                <Image src={selectedBlog.photo} alt={selectedBlog.title} layout="fill" objectFit="cover" />
+              <div className="relative my-8 h-96 w-full bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
+                <p className="text-gray-400">[Blog Image Placeholder]</p>
               </div>
               <div dangerouslySetInnerHTML={{ __html: selectedBlog.content }} />
             </article>
@@ -110,6 +121,15 @@ export default function BlogPage() {
 
   return (
     <div className="bg-slate-50 min-h-screen">
+      {/* --- ADDED: Navbar for list view --- */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b">
+        <div className="container mx-auto px-6 py-3 flex justify-between items-center">
+            <Link href="/" className="flex items-center space-x-2">
+                <img src="/logo.jpg/" className="w-10 h-10"/>
+                <h1 className="text-xl font-bold text-gray-900">Commentta</h1>
+            </Link>
+        </div>
+      </header>
       <div className="container mx-auto px-6 py-16">
         <div className="text-center mb-16 max-w-2xl mx-auto">
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">The Commentta Blog</h1>
@@ -121,21 +141,22 @@ export default function BlogPage() {
             <Loader2 className="h-8 w-8 animate-spin text-green-700" />
           </div>
         ) : (
+          // --- MODIFIED: Grid and Card sizes ---
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {blogs.map((post) => (
               <Card 
                 key={post.id} 
-                className="flex flex-col overflow-hidden rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer group"
+                className="flex flex-col overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
                 onClick={() => fetchSingleBlog(post.id)}
               >
-                <div className="relative h-48 w-full">
-                    <Image src={post.photo} alt={post.title} layout="fill" objectFit="cover" className="transition-transform duration-300 group-hover:scale-105"/>
+                <div className="relative h-40 w-full bg-gray-200 flex items-center justify-center">
+                    <p className="text-gray-400 text-sm">[Blog Image]</p>
                 </div>
-                <div className="flex flex-col p-6 flex-grow">
-                  <p className="text-sm text-gray-500 mb-2">{formatDate(post.date)}</p>
-                  <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-green-700 transition-colors">{post.title}</CardTitle>
-                  <CardDescription className="mt-3 text-gray-600 flex-grow text-sm">{post.summary}</CardDescription>
-                  <div className="mt-4 font-semibold text-green-700 text-sm">Read more &rarr;</div>
+                <div className="flex flex-col p-4 flex-grow">
+                  <p className="text-xs text-gray-500 mb-2">{formatDate(post.date)}</p>
+                  <CardTitle className="text-md font-bold text-gray-900 group-hover:text-green-700 transition-colors">{post.title}</CardTitle>
+                  <CardDescription className="mt-2 text-gray-600 flex-grow text-xs">{post.summary}</CardDescription>
+                  <div className="mt-4 font-semibold text-green-700 text-xs">Read more &rarr;</div>
                 </div>
               </Card>
             ))}

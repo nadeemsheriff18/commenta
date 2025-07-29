@@ -5,7 +5,7 @@ import { useRouter, usePathname, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image"; // --- ADDED: Import for Next.js Image component
-import logoImage from './logo.jpg'; // --- ADDED: Import your logo image
+
 
 import {
   Plus,
@@ -159,7 +159,7 @@ export default function Sidebar() {
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
           <Image
-            src={logoImage}
+            src="/logo.jpg"
             alt="Commentta Logo"
             width={32}
             height={32}
