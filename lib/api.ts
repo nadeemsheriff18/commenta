@@ -200,9 +200,22 @@ async getProjects(params?: PaginationParams): Promise<ApiResponse<ProjectListing
   async getProjectSettings(projId: string) { return this.makeRequest<ProjectSettings>(`/project_setting?proj_id=${projId}`); }
 
   // MENTIONS
-  async getPendingMentions(params: MentionParams) { return this.makeRequest<MentionsResponse>(`/pending_mentions?${new URLSearchParams(params as any)}`); }
-  async getPinnedMentions(params: MentionParams) { return this.makeRequest<MentionsResponse>(`/pinned_mentions?${new URLSearchParams(params as any)}`); }
-  async getActedMentions(params: MentionParams) { return this.makeRequest<MentionsResponse>(`/acted_mentions?${new URLSearchParams(params as any)}`); }
+  // Replace the three mention-fetching functions in your ApiService class
+
+async getPendingMentions(params: MentionParams): Promise<ApiResponse<MentionsResponse>> {
+  const queryParams = new URLSearchParams(params as any).toString();
+  return this.makeRequest<MentionsResponse>(`/pending_mentions?${queryParams}`);
+}
+
+async getPinnedMentions(params: MentionParams): Promise<ApiResponse<MentionsResponse>> {
+  const queryParams = new URLSearchParams(params as any).toString();
+  return this.makeRequest<MentionsResponse>(`/pinned_mentions?${queryParams}`);
+}
+
+async getActedMentions(params: MentionParams): Promise<ApiResponse<MentionsResponse>> {
+  const queryParams = new URLSearchParams(params as any).toString();
+  return this.makeRequest<MentionsResponse>(`/acted_mentions?${queryParams}`);
+}
   async actOnMention(data: ActOnMentionData) { return this.makeRequest('/act_on_mention', { method: 'POST', body: JSON.stringify(data) }); }
   async generateComment(data: GenerateCommentData) { return this.makeRequest<{ comment: string }>('/generat_comment', { method: 'POST', body: JSON.stringify(data) }); }
 // Add this function inside your ApiService class in api.ts
