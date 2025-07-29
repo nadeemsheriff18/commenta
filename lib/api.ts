@@ -226,6 +226,12 @@ async generateExplain(url: string): Promise<ApiResponse<any>> {
   async getAvailablePlans() { return this.makeRequest<SubscriptionPlan[]>('/available_plans'); }
   async getPaymentUrl(planId: number) { return this.makeRequest<{url:string}>(`/pay_url?plan_id=${planId}`); }
   
+    async invalidateAllMentionCaches(projId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest(`/invalidate_mention_cache?proj_id=${projId}`, {
+      method: 'POST',
+    });
+  }
+
   // FEEDBACK
   async submitFeedback(payload: { content: string; type: string }) { return this.makeRequest('/feed_back', { method: 'POST', body: JSON.stringify({ feed_back: payload.content, type: payload.type }) }); }
 }
