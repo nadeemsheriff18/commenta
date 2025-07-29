@@ -21,7 +21,7 @@ export interface AuthResponse {
 //process.env.NEXT_PUBLIC_API_URL || 
 // --- Self-Contained AuthService Class ---
 class AuthService {
-  private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+  private baseUrl =process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
   private tokenKey = 'auth_token';
   private userKey = 'user_data';
   private expiryKey = 'token_expiry';
