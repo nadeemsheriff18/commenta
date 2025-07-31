@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,21 +12,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, ArrowLeft, MessageSquare } from "lucide-react";
+import { Loader2, ArrowLeft, MessageSquare, CheckCircle2, Circle } from "lucide-react";
 import { apiService, CreateProjectData } from "@/lib/api";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface CreateProjectFormProps {
   onCreateProject: () => void;
   onBack?: () => void;
 }
 
-// --- ADDED: Messages to cycle through during loading ---
+// --- MODIFIED: New loading messages ---
 const loadingMessages = [
-  "Analyzing your product...",
-  "Setting up monitors...",
-  "Building your dashboard...",
-  "Finalizing project...",
+  "Finding Relevant Subreddits",
+  "Fetching Recent Product Mentions",
+  "Analyzing & Prioritizing Mentions",
+  "Preparing Your Dashboard",
 ];
 
 interface FormState {
@@ -54,19 +55,22 @@ export default function CreateProjectForm({
   const [errors, setErrors] = useState<Partial<FormState>>({});
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
-  // --- ADDED: Effect to cycle through loading messages ---
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isSubmitting) {
       interval = setInterval(() => {
-        setLoadingMessageIndex(prev => (prev + 1) % loadingMessages.length);
-      }, 3000); // Change message every 3 seconds
+        setLoadingMessageIndex(prev => {
+          if (prev < loadingMessages.length - 1) {
+            return prev + 1;
+          }
+          return prev;
+        });
+      }, 3000); // Change message every 3 seconds (12s total / 4 steps)
     }
     return () => clearInterval(interval);
   }, [isSubmitting]);
-
-
-  const handleGenerateExplain = async () => {
+  
+ const handleGenerateExplain = async () => {
     if (!formData.product_link) {
       toast.error("Please enter a product URL first.");
       setErrors((prev) => ({ ...prev, product_link: "Product link is required to auto-generate." }));
@@ -92,8 +96,7 @@ export default function CreateProjectForm({
       setIsGenerating(false);
     }
   };
-
-  const validateForm = (): boolean => {
+ const validateForm = (): boolean => {
     const newErrors: Partial<FormState> = {};
     if (!formData.name.trim()) newErrors.name = "Project name is required";
     if (!formData.product_link.trim()) newErrors.product_link = "Product link is required";
@@ -137,14 +140,32 @@ export default function CreateProjectForm({
   };
 
   const handleInputChange = (field: keyof FormState, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === 'product_link') {
+      setFormData((prev) => ({ ...prev, product_link: value }));
+      try {
+        // --- ADDED: Auto-fill project name from URL ---
+        const url = new URL(value);
+        const hostname = url.hostname.replace(/^www\./, '');
+        const name = hostname.split('.')[0];
+        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+        setFormData((prev) => ({
+          ...prev,
+          name: prev.name || capitalizedName,
+        }));
+      } catch (error) {
+        // Invalid URL, do nothing
+      }
+    } else {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/50 min-h-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-off-white min-h-full">
         <div className="max-w-3xl mx-auto">
             {onBack && (
                 <div className="mb-4">
@@ -155,15 +176,35 @@ export default function CreateProjectForm({
                 </div>
             )}
 
-            <Card className="shadow-lg relative">
-              {/* --- ADDED: Loading Overlay --- */}
+            <Card className="shadow-lg relative overflow-hidden">
               {isSubmitting && (
-                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-lg">
-                    <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
-                    <p className="mt-4 text-lg font-semibold text-gray-700">
-                        {loadingMessages[loadingMessageIndex]}
-                    </p>
-                    <p className="text-sm text-gray-500">This may take up to 12 seconds...</p>
+                <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-8">Creating Your Project...</h2>
+                    <div className="w-full max-w-sm">
+                        <ul className="space-y-4">
+                            {loadingMessages.map((message, index) => (
+                                <li key={index} className="flex items-center space-x-4">
+                                    <div className="flex flex-col items-center">
+                                        {index < loadingMessageIndex ? (
+                                            <CheckCircle2 className="h-6 w-6 text-green-600" />
+                                        ) : index === loadingMessageIndex ? (
+                                            <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                                        ) : (
+                                            <Circle className="h-6 w-6 text-gray-300" />
+                                        )}
+                                    </div>
+                                    <span className={cn(
+                                        "font-medium",
+                                        index < loadingMessageIndex ? "text-gray-500 line-through" : "",
+                                        index === loadingMessageIndex ? "text-indigo-600" : "text-gray-400"
+                                    )}>
+                                        {message}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-8">This may take up to 12 seconds...</p>
                 </div>
               )}
 
@@ -175,42 +216,42 @@ export default function CreateProjectForm({
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                      <Label htmlFor="product_link">Product Link *</Label>
-                      <Input id="product_link" type="url" placeholder="https://yourproduct.com" value={formData.product_link} onChange={(e) => handleInputChange("product_link", e.target.value)} disabled={isSubmitting} className={errors.product_link ? "border-red-500" : ""} />
-                      {errors.product_link && <p className="text-sm text-red-600">{errors.product_link}</p>}
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="name">Project Name *</Label>
-                      <Input id="name" type="text" placeholder="Enter your project name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} disabled={isSubmitting} className={errors.name ? "border-red-500" : ""} />
-                      {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
-                  </div>
-                  <div className="pt-4 border-t">
-                      <Button type="button" onClick={handleGenerateExplain} disabled={isGenerating || isSubmitting || !formData.product_link} className="bg-indigo-600 hover:bg-indigo-700">
-                          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <MessageSquare className="mr-2 h-4 w-4" />}
-                          Auto-generate descriptions
-                      </Button>
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="problem">Problem *</Label>
-                      <Textarea id="problem" rows={4} placeholder="What problem does your product solve?" value={formData.problem} onChange={(e) => handleInputChange("problem", e.target.value)} disabled={isSubmitting} className={errors.problem ? "border-red-500" : ""} />
-                       {errors.problem && <p className="text-sm text-red-600">{errors.problem}</p>}
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="audience">Audience *</Label>
-                      <Textarea id="audience" placeholder="Who is your target audience?" value={formData.audience} onChange={(e) => handleInputChange("audience", e.target.value)} disabled={isSubmitting} rows={4} className={errors.audience ? "border-red-500" : ""} />
-                      {errors.audience && <p className="text-sm text-red-600">{errors.audience}</p>}
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="solution">Solution *</Label>
-                      <Textarea id="solution" placeholder="How does your product solve the problem?" value={formData.solution} onChange={(e) => handleInputChange("solution", e.target.value)} disabled={isSubmitting} rows={4} className={errors.solution ? "border-red-500" : ""} />
-                      {errors.solution && <p className="text-sm text-red-600">{errors.solution}</p>}
-                  </div>
-                  <div className="flex justify-end pt-4">
-                      <Button type="submit" className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
-                          Create Project
-                      </Button>
-                  </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="product_link">Product Link *</Label>
+                        <Input id="product_link" type="url" placeholder="https://yourproduct.com" value={formData.product_link} onChange={(e) => handleInputChange("product_link", e.target.value)} disabled={isSubmitting} className={errors.product_link ? "border-red-500" : ""} />
+                        {errors.product_link && <p className="text-sm text-red-600">{errors.product_link}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Project Name *</Label>
+                        <Input id="name" type="text" placeholder="Enter your project name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} disabled={isSubmitting} className={errors.name ? "border-red-500" : ""} />
+                        {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
+                    </div>
+                    <div className="pt-4 border-t">
+                        <Button type="button" onClick={handleGenerateExplain} disabled={isGenerating || isSubmitting || !formData.product_link} className="bg-green-700 hover:bg-green-800 text-white font-bold">
+                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <MessageSquare className="mr-2 h-4 w-4" />}
+                            Auto-generate descriptions
+                        </Button>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="problem">Problem *</Label>
+                        <Textarea id="problem" rows={4} placeholder="What problem does your product solve?" value={formData.problem} onChange={(e) => handleInputChange("problem", e.target.value)} disabled={isSubmitting} className={errors.problem ? "border-red-500" : ""} />
+                         {errors.problem && <p className="text-sm text-red-600">{errors.problem}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="audience">Audience *</Label>
+                        <Textarea id="audience" placeholder="Who is your target audience?" value={formData.audience} onChange={(e) => handleInputChange("audience", e.target.value)} disabled={isSubmitting} rows={4} className={errors.audience ? "border-red-500" : ""} />
+                        {errors.audience && <p className="text-sm text-red-600">{errors.audience}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="solution">Solution *</Label>
+                        <Textarea id="solution" placeholder="How does your product solve the problem?" value={formData.solution} onChange={(e) => handleInputChange("solution", e.target.value)} disabled={isSubmitting} rows={4} className={errors.solution ? "border-red-500" : ""} />
+                        {errors.solution && <p className="text-sm text-red-600">{errors.solution}</p>}
+                    </div>
+                    <div className="flex justify-center pt-4">
+                        <Button type="submit" className="w-full md:w-auto bg-green-700 hover:bg-green-800" disabled={isSubmitting}>
+                            Create Project
+                        </Button>
+                    </div>
                 </form>
               </CardContent>
             </Card>

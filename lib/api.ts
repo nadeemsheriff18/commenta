@@ -2,7 +2,7 @@
 
 import Cookies from 'js-cookie';
 //process.env.NEXT_PUBLIC_API_URL ||
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||'http://127.0.0.1:8000';
+const API_BASE_URL =process.env.NEXT_PUBLIC_API_URL ||'http://127.0.0.1:8000';
 
 // --- INTERFACES ---
 export interface ApiResponse<T = any> {
@@ -141,7 +141,10 @@ export interface CreateProjectData {
 export interface MentionParams { proj_id: string; hours?: number; ment_type?: 'completed' | 'ignored' | 'noise'; page?: number; limit?: number; }
 export interface ActOnMentionData { ment_id: number; type: 'completed' | 'ignored' | 'pinned' | 'noise' | 'active'; comment?: string; }
 export interface GenerateCommentData { ment_id: number; is_relvent: boolean; }
-export interface AddKnowledgeBaseData { personal_info: Record<string, any>; }
+export interface AddKnowledgeBaseData {
+  title: string;
+  personal_info: string;
+}
 export interface UpdateKnowledgeBaseData { kb_id: number; title: string; content: string; }
 export interface DeleteKnowledgeBaseData { kb_id: number; }
 export interface AddSubredditsData { proj_id: string; subreddits: string[]; }
@@ -227,18 +230,29 @@ async generateExplain(url: string): Promise<ApiResponse<any>> {
 }
   // KNOWLEDGE BASE
   async getKnowledgeBase() { return this.makeRequest<KnowledgeBaseEntry[]>('/list_knowledge_base'); }
-  async addKnowledgeBase(data: AddKnowledgeBaseData) { return this.makeRequest('/add_knowledge_base', { method: 'POST', body: JSON.stringify(data) }); }
+  async addKnowledgeBase(data: AddKnowledgeBaseData): Promise<ApiResponse> {
+  return this.makeRequest('/add_knowledge_base', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
   async updateKnowledgeBase(data: UpdateKnowledgeBaseData) { return this.makeRequest('/update_knowledge_base', { method: 'POST', body: JSON.stringify({ kb_id: data.kb_id, title: data.title, personal_info: data.content }) }); }
   async deleteKnowledgeBase(data: DeleteKnowledgeBaseData) { return this.makeRequest('/del_knowledge_base', { method: 'POST', body: JSON.stringify(data) }); }
   async getFounderTemplates() { return this.makeRequest<FounderTemplate[]>('/founder_template'); }
 
   // SUBREDDITS & KEYWORDS
   async listSubreddits(proj_id: string) { return this.makeRequest<SubredditInfo[]>(`/list_subreddits?proj_id=${proj_id}`); }
-  async searchSubreddits(search: string, params?: PaginationParams): Promise<ApiResponse<SubredditInfo[]>> {
+  // In your ApiService class within src/lib/api.ts
+
+// In your ApiService class
+// In your ApiService class
+// In your ApiService class within src/lib/api.ts
+
+async searchSubreddits(search: string, params?: PaginationParams): Promise<ApiResponse<SubredditInfo[]>> {
   const queryParams = new URLSearchParams();
   queryParams.append('search', search);
 
-  // Add the limit to the URL if it's provided
+  // This correctly adds the limit to the URL if it's provided
   if (params?.limit) {
     queryParams.append('limit', params.limit.toString());
   }

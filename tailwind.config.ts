@@ -9,13 +9,20 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
       fontFamily: {
-        'adlam': ['"Adlam Display"', 'cursive'], // Fallback to cursive
+        'alkalami': ['"Alkalami"', 'cursive'], // Fallback to cursive
+        'Atkinson' :['"Atkinson Hyperlegible"'],
+        'andika':['"Andika"'],
+        'abhaya':['"Abhaya Libre"'],
+        'alexandria':['"Alexandria"'],
+        'alice':['"Alice"'],
+        'anek':['"Anek Devanagari"']
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -25,6 +32,7 @@ const config: Config = {
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        'off-white': '#FCFFEF',
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',

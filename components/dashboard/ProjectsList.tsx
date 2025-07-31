@@ -128,7 +128,7 @@ export default function ProjectsList({
 
   if (isLoading && projects.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full bg-slate-50/50">
+      <div className="flex items-center justify-center h-full bg-off-white">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
@@ -136,7 +136,7 @@ export default function ProjectsList({
 
   return (
     <TooltipProvider>
-      <div className="p-4 sm:p-6 lg:p-8 bg-slate-50/50 min-h-full">
+      <div className="p-4 sm:p-6 lg:p-8 bg-off-white min-h-full">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
             <div>
@@ -145,7 +145,7 @@ export default function ProjectsList({
                 Manage all your projects and their analytics.
               </p>
             </div>
-            <Button onClick={onCreateProject} className="mt-4 md:mt-0 bg-indigo-600 hover:bg-indigo-700 shadow-sm">
+            <Button onClick={onCreateProject} className="mt-4 md:mt-0 bg-green-700 hover:bg-green-800 shadow-sm text-white font-bold">
               <Plus className="mr-2 h-4 w-4" />
               Create Project
             </Button>
@@ -153,36 +153,33 @@ export default function ProjectsList({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Projects</CardTitle><Target className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_projects ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-sm bg-yellow-50"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Projects</CardTitle><Target className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_projects ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total number of projects in your account.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Mentions</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_mentions ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-sm bg-yellow-50"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Mentions</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_mentions ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total mentions found across all your projects.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Subreddits</CardTitle><Hash className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_subreddits ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-sm bg-yellow-50"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Subreddits</CardTitle><Hash className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_subreddits ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total subreddits being monitored across all projects.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Completed Mentions</CardTitle><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_completed ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-sm bg-yellow-50"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Completed Mentions</CardTitle><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_completed ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total number of mentions you have marked as 'Completed'.</p></TooltipContent>
               </Tooltip>
           </div>
 
           <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>All Projects</CardTitle>
-              
-            </CardHeader>
-            <CardContent>
+            
+            <CardContent className="bg-off-white">
               <Table>
-                <TableHeader>
-                  <TableRow className="bg-white hover:bg-slate-100">
-                    <TableHead className="text-slate-600">Project Name</TableHead>
-                    <TableHead className="text-slate-600">Product Link</TableHead>
-                    <TableHead className="text-slate-600">Created</TableHead>
-                    <TableHead className="text-right text-slate-600">Actions</TableHead>
+                <TableHeader >
+                  <TableRow className="bg-off-white mt-auto">
+                    <TableHead className="text-slate-700 font-bold">Project Name</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Product Link</TableHead>
+                    <TableHead className="text-slate-700 font-bold">Created</TableHead>
+                    <TableHead className="text-right text-slate-700">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -190,7 +187,7 @@ export default function ProjectsList({
                     <TableRow key={project.id}>
                       <TableCell className="font-medium text-gray-800">{project.name}</TableCell>
                       <TableCell>
-                        <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline flex items-center gap-1 text-sm">
+                        <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline flex items-center gap-1 text-sm">
                           <span className="truncate max-w-[150px]">{project.link}</span>
                           <ExternalLink className="h-3 w-3" />
                         </a>

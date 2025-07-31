@@ -33,14 +33,14 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="bg-slate-100 text-gray-800">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b">
+    <div className="bg-off-white text-gray-800">
+      <header className="sticky top-0 z-50 backdrop-blur-sm border-b">
         <div className="container mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-2">
             <img src="/logo.jpg" className="w-8 h-8 rounded-lg" />
             <h1 className="text-xl font-bold text-gray-900">Commentta</h1>
           </Link>
-          <nav className="hidden md:flex items-center space-x-6 text-sm">
+          <nav className="hidden md:flex items-center space-x-6 text-sm font-bold">
             <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Product</Link>
             <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link>
             
@@ -60,17 +60,17 @@ export default function LandingPage() {
         <section className="py-20 sm:py-28">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 leading-tight font-adlam">
-                Be in the Right Reddit Conversations at the Right Time, Every Day
+              <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-gray-900 leading-tight font-alkalami">
+                Be in the Right Reddit Conversations at the <span className="text-green-700">Right Time, Every Day</span>
               </h1>
-              <p className="mt-6 text-lg text-gray-600">
-                We catch Reddit leads every day, write your perfect reply, and you post it — all in under a minute.<span className="text-blue-500"> It’s a proven strategy that’s already driving results.</span>
+              <p className="mt-4 text-lg text-gray-600 font-Atkinson">
+                Reddit has leads and you’re missing the easiest way to talk to your customers every day. We find them early, help you write the perfect reply, and you post it in under a minute.<span className="text-blue-500"> This approach is already working  see the proof below</span>
               </p>
-              <div className="mt-10 flex items-center justify-center lg:justify-start gap-x-4">
-                <Button size="lg" className="bg-green-700 hover:bg-green-800 rounded-lg" onClick={handleGetStarted}>Start Now</Button>
-                <Button size="lg" variant="outline" onClick={() => { }}>See how it works</Button>
+              <div className="mt-6 flex items-center justify-center lg:justify-start gap-x-4">
+                <Button size="lg" className="bg-green-700 hover:bg-green-800 rounded-lg font-bold text-lg" onClick={handleGetStarted}>Start Now</Button>
+                
               </div>
-              <div className="mt-8 flex items-center justify-center lg:justify-start gap-x-6 text-sm text-gray-500">
+              <div className="mt-6 flex items-center justify-center lg:justify-start gap-x-6 text-sm text-gray-500">
                 <span className="flex items-center"><CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />Free plan available</span>
                 <span className="flex items-center"><CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />No credit card required</span>
                 <span className="flex items-center"><CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />Setup in few seconds</span>
@@ -84,11 +84,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="social-proof" className="bg-slate-100 py-24 sm:py-32">
+        <section id="social-proof" className="py-24 sm:py-32">
   <div className="container mx-auto px-6">
-    <div className="text-center max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-        People Are Already Winning With This Approach
+    <div className="text-center max-w-5xl mx-auto">
+      <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl font-abhaya">
+        Your Competitors Are Already Winning with This Approach
       </h2>
     </div>
 
@@ -96,7 +96,7 @@ export default function LandingPage() {
       {/* Testimonial 1 */}
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div>
-          <h3 className="text-3xl font-bold text-gray-900">Big purchase influenced by Reddit. Real buyers. Real decisions. Right in the <span className="text-red-600"> Comments.</span></h3>
+          <h3 className="text-2xl font-bold text-gray-900 font-andika">Big purchase influenced by Reddit. Real buyers. Real decisions. Right in the <span className="text-red-600"> Comments.</span></h3>
           <Button variant="outline" className="mt-6 bg-blue-500 text-white font-bold">See the proof</Button>
         </div>
         {/* --- MODIFIED: Added overflow-hidden to the container --- */}
@@ -109,8 +109,8 @@ export default function LandingPage() {
       {/* Testimonial 2 */}
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div className="lg:order-last">
-          <h3 className="text-3xl font-bold text-gray-900">Built on Reddit. $80K/Month. No Ads.</h3>
-          <p className="mt-4 text-gray-700">Pat grew Starter Story to $80K/month by showing up, helping others, and staying <span className="text-blue-600"> consistent.</span> Reddit worked for him — Commentta helps it work for you.</p>
+          <h3 className="text-2xl font-bold text-gray-900 font-andika">Built on Reddit. $80K/Month. No Ads.</h3>
+          <p className="mt-2 text-xl font-bold text-gray-900 font-andika">Pat grew Starter Story to $80K/month by showing up, helping others, and staying <span className="text-blue-600"> consistent.</span> Reddit worked for him — Commentta helps it work for you.</p>
           <Button variant="outline" className="mt-6 bg-blue-500 text-white font-bold">See the proof</Button>
         </div>
         <div className="rounded-lg shadow-xl border-2 border-red-600 overflow-hidden">
@@ -121,7 +121,7 @@ export default function LandingPage() {
       {/* Testimonial 3 */}
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div>
-          <h3 className="text-3xl font-bold text-gray-900">Shimmer made $280K from Reddit in one year. No ads. Just real replies, real people, real trust. <br/><br/>You can do it too — and Commentta makes it 10x easier.</h3>
+          <h3 className="text-2xl font-bold text-gray-900 font-andika">Shimmer made $280K from Reddit in one year. No ads. Just real replies, real people, real trust. <br/><br/>You can do it too — and Commentta makes it 10x easier.</h3>
           <Button className="mt-6 bg-green-700 hover:bg-green-800 text-white font-bold">Start now</Button>
         </div>
         <div className="rounded-lg shadow-xl border-2 border-red-600">
@@ -136,7 +136,7 @@ export default function LandingPage() {
 
         <section id="demo" className="py-16 sm:py-24">
           <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+            <h2 className="text-4xl font-bold tracking-tight text-gray-900 font-abhaya">
               Watch this quick demo to see how Commentta works.
             </h2>
             <div className="mt-10 max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden">
@@ -149,10 +149,10 @@ export default function LandingPage() {
 
         <section id="features" className="container mx-5 px-6 py-16 sm:py-24 space-y-20">
 
-          <div className="text-center max-w-3xl mx-auto">
+          <div className="text-center max-w-4xl mx-auto">
 
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900">See How Commentta Finds Leads & Writes Replies</h2>
-
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 font-abhaya">Start in 3 simple steps and let Commentta bring the right customers to you.</h2>
+           <p className="font-alexandria mt-2 text-lg">Enter your website URL and let Commentta analyze your product, profile your audience, and start finding the right leads for you.</p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -169,13 +169,13 @@ export default function LandingPage() {
 
             <div>
 
-              <h3 className="text-2xl my-2 font-bold">Discover</h3>
+              <h3 className="text-2xl my-2 font-bold font-alice">Discover</h3>
 
-              <h3 className="text-xl font-bold text-gray-900">Commentta scans Reddit 24/7</h3>
+              <h3 className="text-xl font-bold text-gray-900 font-alexandria">Commentta scans Reddit 24/7</h3>
 
-              <p className="mt-2 text-gray-600">We surface the right posts, rank them by priority, and generate replies that sound like you.</p>
+              <p className="mt-2 text-gray-600 font-alexandria">We surface the right posts, rank them by priority, and generate replies that sound like you.</p>
 
-              <ul className="mt-4 space-y-1 text-lg text-gray-700 font-bold">
+              <ul className="mt-4 space-y-1 text-lg text-gray-700 font-bold font-alexandria">
 
                 <li className="flex items-start"><CheckCircle2 className="h-5 w-5 text-green-600 mr-2 mt-1 flex-shrink-0" /><span>Real-time leads from Reddit</span></li>
 
@@ -205,13 +205,13 @@ export default function LandingPage() {
 
             <div>
 
-              <h3 className="text-2xl my-2 font-bold">Engage</h3>
+              <h3 className="text-2xl my-2 font-bold font-alice">Engage</h3>
 
-              <h3 className="text-xl font-bold text-gray-900">Commentta Crafts Replies That Sell</h3>
+              <h3 className="text-xl font-bold text-gray-900 font-alexandria">Commentta Crafts Replies That Sell</h3>
 
-              <p className="mt-2 text-gray-600">We read the thread, understand the user, and write a response that fits naturally.</p>
+              <p className="mt-2 text-gray-600 font-alexandria">We read the thread, understand the user, and write a response that fits naturally.</p>
 
-              <ul className="mt-4 space-y-1 text-lg font-bold text-gray-700">
+              <ul className="mt-4 space-y-1 text-lg font-bold text-gray-700 font-alexandria">
 
                 <li className="flex items-start"><CheckCircle2 className="h-5 w-5 text-green-600 mr-2 mt-1 flex-shrink-0" /><span>Smart, Context-Aware Replies</span></li>
 
@@ -239,19 +239,19 @@ export default function LandingPage() {
 
             <div>
 
-              <h3 className="text-2xl my-2 font-bold">Grow</h3>
+              <h3 className="text-2xl my-2 font-bold font-alice">Grow</h3>
 
 
 
-              <h3 className="text-xl font-bold text-gray-900">We alert you by email. You post the reply.</h3>
+              <h3 className="text-xl font-bold text-gray-900 font-alexandria">We alert you by email. You post the reply.</h3>
 
-              <h3 className="text-xl font-bold text-gray-900">Consistency turns comments into customers..</h3>
+              <h3 className="text-xl font-bold text-gray-900 font-alexandria">Consistency turns comments into customers..</h3>
 
 
 
-              <p className="mt-2 text-gray-600">Build community by showing up daily.</p>
-
-              <p className="mt-2 text-gray-600 font-bold">Just come back every day, post the reply, and stay consistent. That's how real trust and traffic builds.</p>
+              <p className="mt-2 font-alexandria text-orange-500">Right thread, right words, right time. That’s it.</p>
+<Button size="lg" className="bg-green-700 hover:bg-green-800 rounded-2xl font-bold mt-3 p-3 text-sm" onClick={handleGetStarted}>Catch a thread</Button>
+              
 
 
 
@@ -284,10 +284,10 @@ export default function LandingPage() {
         <section id="pricing" className="py-24 sm:py-32">
           <div className="container mx-auto px-6">
             <div className="text-center max-w-2xl mx-auto">
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900">Plan and pricing</h2>
+              <h2 className="text-4xl font-bold tracking-tight text-gray-900 font-abhaya">Plan and pricing</h2>
             </div>
             <div className="mt-16 grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <Card className="flex flex-col shadow-lg border-2 rounded-2xl">
+              <Card className="flex flex-col shadow-lg border-2 rounded-2xl font-anek">
                 <CardHeader><CardTitle className="text-xl font-bold">Free</CardTitle><CardDescription>Get started instantly</CardDescription></CardHeader>
                 <CardContent className="flex-grow space-y-6">
                   <p className="text-4xl font-bold">Try Free for 3 Days</p>
@@ -306,7 +306,7 @@ export default function LandingPage() {
                 <CardFooter><Button variant="outline" className="w-full rounded-lg bg-green-700 text-white hover:bg-green-800" onClick={handleGetStarted}>Start free</Button></CardFooter>
               </Card>
 
-              <Card className="flex flex-col shadow-lg border-2 border-green-700 rounded-2xl">
+              <Card className="flex flex-col shadow-lg border-2 border-green-700 rounded-2xl font-anek">
                 <CardHeader><CardTitle className="text-xl font-bold">Commentta Pro</CardTitle><CardDescription>Access all of our premium features...</CardDescription></CardHeader>
                 <CardContent className="flex-grow space-y-6">
                   <p className="text-4xl font-bold">$50.00 for 30 days</p>

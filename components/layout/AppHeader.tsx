@@ -42,7 +42,7 @@ export default function AppHeader({
     }
   };
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+    <header className="bg-off-white border-b border-gray-200 px-6 py-4 shadow-sm">
       {/* --- MODIFIED: Changed justify-between to justify-end --- */}
       <div className="flex items-center justify-end">
         
