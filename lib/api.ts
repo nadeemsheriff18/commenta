@@ -89,19 +89,7 @@ export interface ProjectListingResponse {
   total_completed: number; // <-- ADD THIS LINE
   projects: Project[];
 }
-export interface AccountDetails {
-  name: string;
-  email: string;
-  plan_name: string;
-  is_expired: boolean;
-  expires_on: string;
-  active_subreds: number;
-  max_subreds: number;
-  comments_count: number;
-  max_comments: number;
-  kb_size: number;
-  max_kb_size: number;
-}
+
 export interface SubscriptionPlan {
   id: number;
   name: string;
@@ -266,7 +254,7 @@ async searchSubreddits(search: string, params?: PaginationParams): Promise<ApiRe
   async deleteKeywords(data: DeleteKeywordsData) { return this.makeRequest('/del_keywords', { method: 'POST', body: JSON.stringify({ proj_id: data.proj_id, keywords: data.del_keywords }) }); }
 
   // ACCOUNT & BILLING
-  async getAccountDetails() { return this.makeRequest<AccountDetails>('/account'); }
+ 
   async getAvailablePlans() { return this.makeRequest<SubscriptionPlan[]>('/available_plans'); }
   async getPaymentUrl(planId: number) { return this.makeRequest<{url:string}>(`/pay_url?plan_id=${planId}`); }
   
