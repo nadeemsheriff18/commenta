@@ -10,7 +10,7 @@ import ProjectSettings from "./ProjectSettings";
 import KeywordsPage from "./KeywordsPage";
 import SubredditsPage from "./SubredditsPage";
 import KnowledgeBase from "./KnowledgeBase";
-import Accounts from "./Accounts";
+
 import ProfileSettings from "./ProfileSettings";
 import { Project } from "@/lib/api";
 import { apiService } from "@/lib/api";
@@ -120,8 +120,7 @@ export default function Dashboard({
         );
       case "knowledge-base":
         return <KnowledgeBase />;
-      case "accounts":
-        return <Accounts />;
+      
       case "profile":
         return (
           <ProfileSettings

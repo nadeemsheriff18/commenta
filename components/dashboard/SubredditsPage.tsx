@@ -184,7 +184,7 @@ export default function SubredditsPage({ project }: SubredditsPageProps) {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-off-white min-h-full flex flex-col">
+    <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-full flex flex-col">
       <div className="max-w-7xl mx-auto w-full">
         <div className="flex items-center justify-between mb-8">
           <div>

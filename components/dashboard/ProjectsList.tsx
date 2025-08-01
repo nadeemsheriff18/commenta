@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Calendar,
   Target,
+  Eye,EyeOff,
   Hash,
   MessageSquare,
   Loader2,
@@ -136,7 +137,7 @@ export default function ProjectsList({
 
   return (
     <TooltipProvider>
-      <div className="p-4 sm:p-6 lg:p-8 bg-off-white min-h-full">
+      <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-full">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
             <div>
@@ -153,29 +154,29 @@ export default function ProjectsList({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm bg-yellow-50"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Projects</CardTitle><Target className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_projects ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-sm bg-white"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Projects</CardTitle><Target className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_projects ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total number of projects in your account.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm bg-yellow-50"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Mentions</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_mentions ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-sm bg-white"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Mentions</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_mentions ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total mentions found across all your projects.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm bg-yellow-50"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Subreddits</CardTitle><Hash className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_subreddits ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-sm bg-white"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Subreddits</CardTitle><Hash className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_subreddits ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total subreddits being monitored across all projects.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm bg-yellow-50"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Completed Mentions</CardTitle><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_completed ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-sm bg-white"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Completed Mentions</CardTitle><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_completed ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total number of mentions you have marked as 'Completed'.</p></TooltipContent>
               </Tooltip>
           </div>
 
           <Card className="shadow-sm">
             
-            <CardContent className="bg-off-white">
+            <CardContent className="bg-white">
               <Table>
                 <TableHeader >
-                  <TableRow className="bg-off-white mt-auto">
+                  <TableRow className="bg-white mt-auto">
                     <TableHead className="text-slate-700 font-bold">Project Name</TableHead>
                     <TableHead className="text-slate-700 font-bold">Product Link</TableHead>
                     <TableHead className="text-slate-700 font-bold">Created</TableHead>
@@ -196,7 +197,7 @@ export default function ProjectsList({
                       <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={() => onEditProject(project)} title="View Project Dashboard">
                               <span className="sr-only">View Project Dashboard</span>
-                              <Edit className="h-4 w-4 text-gray-500" />
+                              <Eye className="h-4 w-4 text-gray-500" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => setDeleteProjectId(project.id)} title="Delete Project">
                               <span className="sr-only">Delete Project</span>

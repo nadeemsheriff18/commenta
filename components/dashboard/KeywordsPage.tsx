@@ -147,7 +147,7 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-off-white min-h-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-full">
       {/* --- MODIFIED: Removed mx-auto to align content to the left --- */}
       <div className="w-full text-left">
         <div className="flex items-center justify-between mb-8">
@@ -187,14 +187,14 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">All Keywords ({keywords.length})</h2>
           {isLoading ? (
             <div className="py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-green-700" />
             </div>
           ) : keywords.length === 0 ? (
             <div className="py-8 border-2 border-dashed rounded-lg p-6 text-left">
               <Hash className="h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No keywords yet</h3>
               <p className="text-gray-600 mb-4">Add keywords to start tracking mentions for your project.</p>
-              <Button onClick={() => setIsAddDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button onClick={() => setIsAddDialogOpen(true)} className="bg-green-700 hover:bg-green-800">
                 <Plus className="mr-2 h-4 w-4" /> Add Your First Keywords
               </Button>
             </div>

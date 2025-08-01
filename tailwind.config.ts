@@ -22,7 +22,8 @@ const config: Config = {
         'abhaya':['"Abhaya Libre"'],
         'alexandria':['"Alexandria"'],
         'alice':['"Alice"'],
-        'anek':['"Anek Devanagari"']
+        'anek':['"Anek Devanagari"'],
+        'pragati':['"Pragati Narrow"']
       },
       borderRadius: {
         lg: 'var(--radius)',

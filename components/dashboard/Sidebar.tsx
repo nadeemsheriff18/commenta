@@ -122,7 +122,7 @@ export default function Sidebar() {
   );
 
   return (
-    <div className="w-64 bg-off-white border-r border-gray-200 flex flex-col h-screen">
+    <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen">
       <div className="p-4">
         <Link href="/projects" className="flex items-center space-x-3">
           <Image src="/logo.jpg/" alt="Commentta Logo" width={32} height={32} className="rounded-lg"/>

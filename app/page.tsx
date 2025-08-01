@@ -33,12 +33,12 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="bg-off-white text-gray-800">
+    <div className="bg-white text-gray-800">
       <header className="sticky top-0 z-50 backdrop-blur-sm border-b">
         <div className="container mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-2">
             <img src="/logo.jpg" className="w-8 h-8 rounded-lg" />
-            <h1 className="text-xl font-bold text-gray-900">Commentta</h1>
+            <h1 className="text-2xl font-bold text-gray-900 font-pragati">Commentta</h1>
           </Link>
           <nav className="hidden md:flex items-center space-x-6 text-sm font-bold">
             <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Product</Link>
@@ -50,14 +50,14 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center space-x-2">
             
-            <Button size="sm" className="bg-green-700 hover:bg-green-800">Go to Dashboard</Button>
+           <Link href='/projects'> <Button size="sm" className="bg-green-700 hover:bg-green-800">Go to Dashboard</Button></Link>
           </div>
         </div>
       </header>
 
       {/* --- MODIFIED: Added a single main container for consistent horizontal margins --- */}
       <main className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <section className="py-20 sm:py-28">
+        <section className="container mx-auto px-8 py-16 sm:py-20">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-4xl font-bold tracking-tight text-gray-900 leading-tight font-alkalami">
@@ -84,7 +84,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="social-proof" className="py-24 sm:py-32">
+        <section id="social-proof" className="py-16 sm:py-20">
   <div className="container mx-auto px-6">
     <div className="text-center max-w-5xl mx-auto">
       <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl font-abhaya">
@@ -134,7 +134,7 @@ export default function LandingPage() {
   </div>
 </section>
 
-        <section id="demo" className="py-16 sm:py-24">
+        <section id="demo" className="py-16 sm:py-20">
           <div className="text-center">
             <h2 className="text-4xl font-bold tracking-tight text-gray-900 font-abhaya">
               Watch this quick demo to see how Commentta works.
@@ -147,7 +147,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="features" className="container mx-5 px-6 py-16 sm:py-24 space-y-20">
+        <section id="features" className="container mx-5 px-6 py-16 sm:py-20 space-y-16">
 
           <div className="text-center max-w-4xl mx-auto">
 
@@ -263,7 +263,7 @@ export default function LandingPage() {
 
         </section>
 
-        <section id="faq" className="py-24 sm:py-32">
+        <section id="faq" className="py-16 sm:py-20">
           <div className="max-w-3xl mx-auto">
             <div className="text-center">
               <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
@@ -329,15 +329,43 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t">
-        <div className="container mx-auto px-6 py-8 flex justify-between items-center text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} Commentta. All rights reserved.</p>
-          <div className="flex space-x-4">
-            <Link href="#" className="hover:text-gray-800">Twitter</Link>
-            <Link href="#" className="hover:text-gray-800">LinkedIn</Link>
-          </div>
-        </div>
-      </footer>
+      <footer className="bg-off-white border-t py-10">
+  <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8 text-gray-700">
+    {/* Column 1: Brand and Contact */}
+    <div className="col-span-1 md:col-span-2">
+      <h3 className="text-xl font-bold text-gray-900">Commentta</h3>
+      <p className="mt-4 text-sm max-w-xs">
+        Skip the scroll. We surface Reddit posts worth replying to.
+      </p>
+      <p className="mt-6 text-sm">
+        Contact us: <a href="mailto:support@commentta.com" className="font-semibold text-green-700 hover:underline">support@commentta.com</a>
+      </p>
+    </div>
+
+    {/* Column 2: Links */}
+    <div>
+      <h4 className="font-semibold text-gray-900">Product</h4>
+      <ul className="mt-2 space-y-3 text-sm">
+        <li><Link href="#features" className="hover:text-green-700">Features</Link></li>
+        <li><Link href="#pricing" className="hover:text-green-700">Pricing</Link></li>
+        <li><Link href="/blog" className="hover:text-green-700">Blog</Link></li>
+      </ul>
+    </div>
+
+    {/* Column 3: Legal */}
+    <div>
+      <h4 className="font-semibold text-gray-900">Company</h4>
+      <ul className="mt-2 space-y-3 text-sm">
+        <li><Link href="#" className="hover:text-green-700">Terms & Conditions</Link></li>
+        <li><Link href="#" className="hover:text-green-700">Privacy Policy</Link></li>
+      </ul>
+    </div>
+  </div>
+
+  <div className="container mx-auto px-6 mt-8 pt-8 border-t text-sm text-gray-500 text-center">
+    <p>© {new Date().getFullYear()} Commentta. All rights reserved.</p>
+  </div>
+</footer>
     </div>
   );
 }
