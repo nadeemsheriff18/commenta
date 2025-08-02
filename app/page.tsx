@@ -23,13 +23,25 @@ import { useRouter } from "next/navigation";
 export default function LandingPage() {
   const router = useRouter();
 
+  
+
+  const redirect = () => {
+    router.push("/pro-payment");
+  };
+
+ 
+
   const handleGetStarted = () => { router.push('/login'); };
   const handleSignIn = () => { router.push('/login'); };
 
   const faqData = [
-    { question: "Is Commentta free?", answer: "Yes, we offer a free tier with limited features to get you started." },
-    { question: "How does the AI generate comments?", answer: "Our AI uses your Knowledge Base and the context of the Reddit conversation to craft a relevant, helpful reply." },
-    { question: "Can I use this for multiple products?", answer: "Yes. Each 'Project' in Commentta can be configured for a different product." },
+    { question: "What is Commentta, and who is it for?", answer: "Commentta is an AI tool that helps you find and respond to Reddit conversation related to your product or business as fast as possible without wasting time on scrolling. You’ll get email alerts every 2 hours for Reddit posts related to your product or niche.It’s built for founders, marketers, indie hackers, and agencies who want to grow through real conversations." },
+    { question: "Why do I need Commentta?", answer: "People ask things you can genuinely help with — but finding those posts takes time, and most slip by. Commentta finds the right ones for you and helps you reply quickly.You stay close to your audience and jump in before the moment passes." },
+    { question: " Will Commentta post comments automatically?", answer: "No." },
+    {question:"Can commenting actually bring users to my product?",answer:"Yes if you do it right. When you leave thoughtful, experience-based comments in the right conversations, you show that you understand the problem, not just that you have a product. That builds trust. If your product fits naturally into the discussion, people will check it out  not because you pitched, but because you helped. It’s slow-burn, high-quality growth — and often how your first real users find you"},
+    {question:"What happens after I sign up?",answer:"After signing up, you’ll be asked to describe what is your product or business is about . Based on that, Commentta will start tracking relevant subreddits and send you email alerts when matching posts show up. From there, you can generate, edit, and post comments directly"},
+    {question:"Why can’t I just search posts manually and comment myself?",answer:"a.You’ll be too late.Manually searching takes hours  and crafting the right reply for each post slows you down even more. By the time you hit “post,” the thread’s already cold. Commentta makes sure you’re early, fast, and on point  every time."},
+    {question:"What’s the one thing I should do after signing up for Commentta?",answer:"Show up every day. Check your email — that’s where the opportunity lands.Reply while it’s fresh. Miss a day, and you might miss your next user, beta tester, or breakthrough insight. It works — because it’s a proven strategy. Just don’t sit on it."}
   ];
 
   return (
@@ -37,7 +49,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 backdrop-blur-sm border-b">
         <div className="container mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-2">
-            <img src="/logo.jpg" className="w-8 h-8 rounded-lg" />
+            <img src="/logo.jpg/" className="w-8 h-8 rounded-lg" />
             <h1 className="text-2xl font-bold text-gray-900 font-pragati">Commentta</h1>
           </Link>
           <nav className="hidden md:flex items-center space-x-6 text-sm font-bold">
@@ -97,7 +109,7 @@ export default function LandingPage() {
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div>
           <h3 className="text-2xl font-bold text-gray-900 font-andika">Big purchase influenced by Reddit. Real buyers. Real decisions. Right in the <span className="text-red-600"> Comments.</span></h3>
-          <Button variant="outline" className="mt-6 bg-blue-500 text-white font-bold">See the proof</Button>
+          <Link href="https://www.reddit.com/r/Entrepreneurs/comments/1hvi7l4/i_tested_reddit_content_marketing_for_a_year_got/?utm_source=chatgpt.com"><Button variant="outline" className="mt-6 bg-blue-500 text-white font-bold">See the proof</Button></Link>
         </div>
         {/* --- MODIFIED: Added overflow-hidden to the container --- */}
         <div className="rounded-lg shadow-xl border-2 border-red-600 overflow-hidden">
@@ -111,7 +123,7 @@ export default function LandingPage() {
         <div className="lg:order-last">
           <h3 className="text-2xl font-bold text-gray-900 font-andika">Built on Reddit. $80K/Month. No Ads.</h3>
           <p className="mt-2 text-xl font-bold text-gray-900 font-andika">Pat grew Starter Story to $80K/month by showing up, helping others, and staying <span className="text-blue-600"> consistent.</span> Reddit worked for him — Commentta helps it work for you.</p>
-          <Button variant="outline" className="mt-6 bg-blue-500 text-white font-bold">See the proof</Button>
+          <Link href="https://www.reddit.com/r/Entrepreneur/comments/xjclme/my_website_about_startups_made_79342_this_month/"><Button variant="outline" className="mt-6 bg-blue-500 text-white font-bold">See the proof</Button></Link>
         </div>
         <div className="rounded-lg shadow-xl border-2 border-red-600 overflow-hidden">
           <img src="/proof2.png" alt="Testimonial proof 2" className="w-full h-full object-cover"/>
@@ -322,14 +334,14 @@ export default function LandingPage() {
                     </ul>
                   </div>
                 </CardContent>
-                <CardFooter><Button className="w-full rounded-lg bg-green-700 hover:bg-green-800" onClick={handleGetStarted}>Get Started</Button></CardFooter>
+                <CardFooter><Button className="w-full rounded-lg bg-green-700 hover:bg-green-800" onClick={redirect}>Get Started</Button></CardFooter>
               </Card>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="bg-off-white border-t py-10">
+      <footer className="bg-slate-100 border-t py-10">
   <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8 text-gray-700">
     {/* Column 1: Brand and Contact */}
     <div className="col-span-1 md:col-span-2">
@@ -356,8 +368,8 @@ export default function LandingPage() {
     <div>
       <h4 className="font-semibold text-gray-900">Company</h4>
       <ul className="mt-2 space-y-3 text-sm">
-        <li><Link href="#" className="hover:text-green-700">Terms & Conditions</Link></li>
-        <li><Link href="#" className="hover:text-green-700">Privacy Policy</Link></li>
+        <li><Link href="/terms_and_conditions" className="hover:text-green-700">Terms & Conditions</Link></li>
+        <li><Link href="/privacypolicies" className="hover:text-green-700">Privacy Policy</Link></li>
       </ul>
     </div>
   </div>

@@ -114,28 +114,28 @@ export default function Sidebar() {
 
   const ProjectSubsections = ({ project }: { project: Project }) => (
     <div className="ml-7 space-y-1">
-      <Link href={`/projects/${project.id}`} className={cn("block w-full text-left pl-3 pr-2 py-1.5 text-sm rounded-md transition-colors", isProjectActive(project.id) ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:bg-gray-100")}>- Dashboard</Link>
-      <Link href={`/projects/${project.id}/keywords`} className={cn("block w-full text-left pl-3 pr-2 py-1.5 text-sm rounded-md transition-colors", isProjectActive(project.id, "keywords") ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:bg-gray-100")}>- Keywords</Link>
-      <Link href={`/projects/${project.id}/subreddits`} className={cn("block w-full text-left pl-3 pr-2 py-1.5 text-sm rounded-md transition-colors", isProjectActive(project.id, "subreddits") ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:bg-gray-100")}>- Subreddits</Link>
-      <Link href={`/projects/${project.id}/settings`} className={cn("block w-full text-left pl-3 pr-2 py-1.5 text-sm rounded-md transition-colors", isProjectActive(project.id, "settings") ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:bg-gray-100")}>- Settings</Link>
+      <Link href={`/projects/${project.id}`} className={cn("block w-full text-left pl-3 pr-2 py-1.5 text-sm rounded-md transition-colors", isProjectActive(project.id) ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100")}>- Dashboard</Link>
+      <Link href={`/projects/${project.id}/keywords`} className={cn("block w-full text-left pl-3 pr-2 py-1.5 text-sm rounded-md transition-colors", isProjectActive(project.id, "keywords") ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100")}>- Keywords</Link>
+      <Link href={`/projects/${project.id}/subreddits`} className={cn("block w-full text-left pl-3 pr-2 py-1.5 text-sm rounded-md transition-colors", isProjectActive(project.id, "subreddits") ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100")}>- Subreddits</Link>
+      <Link href={`/projects/${project.id}/settings`} className={cn("block w-full text-left pl-3 pr-2 py-1.5 text-sm rounded-md transition-colors", isProjectActive(project.id, "settings") ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100")}>- Settings</Link>
     </div>
   );
 
   return (
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen">
       <div className="p-4">
-        <Link href="/projects" className="flex items-center space-x-3">
+        <Link href="/" className="flex items-center space-x-3">
           <Image src="/logo.jpg/" alt="Commentta Logo" width={32} height={32} className="rounded-lg"/>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Commentta</h2>
-            <p className="text-xs text-gray-500">Management Suite</p>
+            
           </div>
         </Link>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 flex flex-col">
         <div className="space-y-2">
-          <Link href="/projects" className={cn("w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors font-medium", isActive("/projects") ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:bg-gray-100")}>
+          <Link href="/projects" className={cn("w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors font-medium", isActive("/projects") ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100")}>
             <Home className="mr-2 h-4 w-4" />
             Home
           </Link>
@@ -169,7 +169,7 @@ export default function Sidebar() {
                     <div className="flex items-center group">
                       <button
                         onClick={() => setExpandedProject(expandedProject === project.id ? null : project.id)}
-                        className={cn("flex items-center flex-1 px-3 py-1.5 text-sm rounded-md hover:bg-gray-100 transition-colors text-left", currentProjectId === project.id ? "text-indigo-600" : "text-gray-700")}
+                        className={cn("flex items-center flex-1 px-3 py-1.5 text-sm rounded-md hover:bg-gray-100 transition-colors text-left font-bold", currentProjectId === project.id ? "text-green-600" : "text-gray-700")}
                         title={`Expand ${project.name}`}
                       >
                         {expandedProject === project.id ? <ChevronDown className="mr-2 h-4 w-4 flex-shrink-0" /> : <ChevronRight className="mr-2 h-4 w-4 flex-shrink-0" />}
@@ -201,11 +201,11 @@ export default function Sidebar() {
         </div>
         
         <div className="space-y-2 pt-4 border-t border-gray-200">
-          <Link href="/knowledgebase" className={cn("w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors", isActive("/knowledgebase") ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:bg-gray-100")}>
+          <Link href="/knowledgebase" className={cn("w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors", isActive("/knowledgebase") ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100")}>
             <Book className="mr-2 h-4 w-4" />
-            Knowledge Base
+            My Life Story
           </Link>
-          <Link href="/accounts" className={cn("w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors", isActive("/accounts") ? "bg-indigo-100 text-indigo-700" : "text-gray-600 hover:bg-gray-100")}>
+          <Link href="/accounts" className={cn("w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors", isActive("/accounts") ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100")}>
             <Users className="mr-2 h-4 w-4" />
             Accounts
           </Link>

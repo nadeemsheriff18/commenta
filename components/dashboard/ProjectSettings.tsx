@@ -96,7 +96,7 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
   }
 
   return (
-    <div className="p-6 w-full bg-off-white">
+    <div className="p-6 w-full bg-white">
       <div className="max-w-4xl mx-auto">
         <div className="mb-4">
           <Button

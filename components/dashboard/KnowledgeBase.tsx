@@ -44,79 +44,108 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-// --- FORM COMPONENT MOVED OUTSIDE TO FIX INPUT FOCUS BUG ---
-const AddEntryForm = ({ 
-  entries, 
-  formData, 
-  setFormData, 
-  handleAddEntry, 
-  isAdding, 
-  setIsAddingEntry, 
-  founderTemplates, 
+// --- Form Component ---
+const AddEntryForm = ({
+  entries,
+  formData,
+  setFormData,
+  handleAddEntry,
+  isAdding,
+  setIsAddingEntry,
+  founderTemplates,
   isLoadingTemplates,
-  handleFounderSelect
-}: any) => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+  handleFounderSelect,
+  showTemplates,
+  setShowTemplates
+}: any) => {
+
+  const FounderTemplateList = () => (
     <div className="space-y-4">
-      {entries.length > 0 && (
-        <Button variant="ghost" onClick={() => setIsAddingEntry(false)} className="mb-2 -ml-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to list
-        </Button>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">Need inspiration?</h3>
+      {isLoadingTemplates ? (
+        <div className="text-center py-4"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto p-1">
+          {founderTemplates.map((founder: FounderTemplate) => (
+            <Card key={founder.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-4">
+                  <img src={founder.photo} alt={founder.name} className="w-12 h-12 rounded-full object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 text-sm">{founder.name}</h4>
+                    <p className="text-xs text-gray-600 mb-2">CEO of {founder.company}</p>
+                    <p className="text-xs text-gray-500 mb-3 line-clamp-2">{founder.description}</p>
+                    <Button size="sm" variant="outline" onClick={() => handleFounderSelect(founder)} className="w-full text-xs">Use this template</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
-      <div className="space-y-2">
-        <Label htmlFor="title">Title (Optional)</Label>
-        <Input id="title" placeholder="e.g., My Founder Story" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="content">Content *</Label>
-        <Textarea id="content" placeholder="Share your story, mindset, what drives you..." value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={10} className="resize-none" />
-        <p className="text-xs text-muted-foreground">{formData.content.length}/1200 characters</p>
-      </div>
-      <Button onClick={handleAddEntry} disabled={isAdding || !formData.content.trim()} className="bg-green-700 hover:bg-green-800">
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      {/* Left side: The Form */}
+      <div className="space-y-4">
+        {entries.length > 0 && (
+          <Button variant="ghost" onClick={() => setIsAddingEntry(false)} className="mb-2 -ml-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to list
+          </Button>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="title"></Label>
+          <Input id="title" placeholder="e.g., My Founder Story" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="content">Content *</Label>
+          <Textarea id="content" placeholder="Share your story, mindset, what drives you..." value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={10} className="resize-none" />
+          <p className="text-xs text-muted-foreground">{formData.content.length}/1200 characters</p>
+        </div>
+        <Button onClick={handleAddEntry} disabled={isAdding || !formData.content.trim()} className="bg-green-700 hover:bg-green-800">
           {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Save Entry
-      </Button>
-    </div>
-    
-    <div>
-      {entries.length === 0 ? (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Need inspiration?</h3>
-          {isLoadingTemplates ? (
-            <div className="text-center py-4"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto p-1">
-              {founderTemplates.map((founder: FounderTemplate) => (
-                <Card key={founder.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-4">
-                      <img src={founder.photo} alt={founder.name} className="w-12 h-12 rounded-full object-cover" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900 text-sm">{founder.name}</h4>
-                        <p className="text-xs text-gray-600 mb-2">CEO of {founder.company}</p>
-                        <p className="text-xs text-gray-500 mb-3 line-clamp-2">{founder.description}</p>
-                        <Button size="sm" variant="outline" onClick={() => handleFounderSelect(founder)} className="w-full text-xs">Use this template</Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-          <div className="bg-white/60 p-6 rounded-lg border text-center mt-10 lg:mt-0 ml-20">
-              <div className="w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-                  <img src="/kb.png/" className="w-20 h-20"/>
-              </div>
-              <p className="text-sm text-gray-600">You've already added a knowledge base entry. If you want to use a template, please delete the current entry first.</p>
-          </div>
-      )}
-    </div>
-  </div>
-);
+        </Button>
+      </div>
 
+      {/* --- MODIFIED: Right side logic --- */}
+      <div>
+        {entries.length === 0 || showTemplates ? (
+          <FounderTemplateList />
+        ) : (
+          <div className="bg-gray-50 p-6 rounded-lg border space-y-4">
+            <h3 className="font-semibold text-gray-800">Add Your Personal Info or Content Snippets</h3>
+            <p className="text-sm text-gray-600">Paste anything here that helps Commentta understand your voice and style better.</p>
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-600 pl-2">
+              <li>Drop in text from your LinkedIn posts, blogs, or tweets</li>
+              <li>Convert your podcast or video content into text and paste it here</li>
+              <li>Share a short bio or writing samples</li>
+              <li>Use this prompt on any AI model to generate your personal voice profile, then copy and paste the result here: <br />
+                <span className="italic text-gray-500">
+                  "Based on our previous conversations, write a single, well-crafted paragraph (maximum 200 words) that captures who I am professionally. Use the first-person 'I' voice. The tone should be sharp, confident, and clear, suitable for a personal brand bio, professional summary, or website introduction."
+                </span>
+              </li>
+            </ul>
+            <p className="text-center text-sm text-gray-500 pt-2">or just grab a template!</p>
+            <p className="text-center text-sm text-gray-600">Don't have anything ready? No problem. Just select our ready-made voice template to get started instantly.</p>
+            <Button
+              variant="outline"
+              className="w-full bg-white"
+              onClick={() => setShowTemplates(true)}
+            >
+              Select Template
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- Main Component ---
 export default function KnowledgeBase() {
   const [entries, setEntries] = useState<KnowledgeBaseEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -131,6 +160,7 @@ export default function KnowledgeBase() {
   const [founderTemplates, setFounderTemplates] = useState<FounderTemplate[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false); // --- ADDED STATE ---
   const router = useRouter();
 
   const fetchFounderTemplates = useCallback(async () => {
@@ -181,6 +211,13 @@ export default function KnowledgeBase() {
       });
     }
   }, [entryToEdit]);
+
+  // --- ADDED: Reset showTemplates when switching views ---
+  useEffect(() => {
+    if (!isAddingEntry) {
+      setShowTemplates(false);
+    }
+  }, [isAddingEntry]);
 
   const handleFounderSelect = (founder: FounderTemplate) => {
     setFormData({
@@ -290,7 +327,7 @@ export default function KnowledgeBase() {
         </div>
 
         {isAddingEntry ? (
-          <AddEntryForm 
+          <AddEntryForm
             entries={entries}
             formData={formData}
             setFormData={setFormData}
@@ -300,6 +337,8 @@ export default function KnowledgeBase() {
             founderTemplates={founderTemplates}
             isLoadingTemplates={isLoadingTemplates}
             handleFounderSelect={handleFounderSelect}
+            showTemplates={showTemplates}
+            setShowTemplates={setShowTemplates}
           />
         ) : (
           entries.length === 0 ? (
@@ -307,7 +346,7 @@ export default function KnowledgeBase() {
                 <BookOpenCheck className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Your Knowledge Base is Empty</h3>
                 <p className="text-gray-600 mb-4">Add your first entry to start training the AI.</p>
-                <Button onClick={() => setIsAddingEntry(true)} className="bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={() => setIsAddingEntry(true)} className="bg-green-600 hover:bg-green-700">
                     <Plus className="mr-2 h-4 w-4" />Add First Entry
                 </Button>
             </div>
@@ -328,7 +367,7 @@ export default function KnowledgeBase() {
                     <p className={cn("text-sm text-gray-600", !expandedEntries.has(entry.id) && "line-clamp-2")}>
                       {entry.content}
                     </p>
-                    <Button variant="link" size="sm" onClick={() => toggleExpanded(entry.id)} className="p-0 h-auto text-indigo-600 mt-2">
+                    <Button variant="link" size="sm" onClick={() => toggleExpanded(entry.id)} className="p-0 h-auto text-green-600 mt-2">
                       {expandedEntries.has(entry.id) ? "Show Less" : "Show More..."}
                     </Button>
                   </CardContent>
@@ -342,16 +381,16 @@ export default function KnowledgeBase() {
         )}
       </div>
       
-      {/* --- ADDED: Edit Dialog --- */}
+      {/* --- Edit Dialog --- */}
       <Dialog open={!!entryToEdit} onOpenChange={(isOpen) => !isOpen && setEntryToEdit(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Knowledge Base Entry</DialogTitle>
             <DialogDescription>Make changes to your entry here. Click save when you're done.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-title">Title (Optional)</Label>
+              <Label htmlFor="edit-title"></Label>
               <Input id="edit-title" value={editFormData.title} onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })} disabled={isSaving} />
             </div>
             <div className="space-y-2">
@@ -360,8 +399,8 @@ export default function KnowledgeBase() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEntryToEdit(null)}>Cancel</Button>
-            <Button onClick={handleUpdateEntry} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+            
+            <Button onClick={handleUpdateEntry} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
@@ -369,7 +408,7 @@ export default function KnowledgeBase() {
         </DialogContent>
       </Dialog>
       
-      {/* --- MODIFIED: Delete Dialog with reduced padding --- */}
+      {/* --- Delete Dialog --- */}
       <AlertDialog open={!!deleteEntryId} onOpenChange={() => setDeleteEntryId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

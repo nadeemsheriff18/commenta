@@ -57,7 +57,7 @@ export function FeedbackDialog({ children }: { children: React.ReactNode }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Submit Feedback</DialogTitle>
           <DialogDescription>
@@ -96,7 +96,7 @@ export function FeedbackDialog({ children }: { children: React.ReactNode }) {
           />
         </div>
         <DialogFooter>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-700 hover:bg-green-800">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Submit
           </Button>

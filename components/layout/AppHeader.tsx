@@ -87,12 +87,7 @@ export default function AppHeader({
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  {onProfileClick && (
-                    <DropdownMenuItem onClick={onProfileClick}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      Profile Settings
-                    </DropdownMenuItem>
-                  )}
+                  
                   <DropdownMenuSeparator />
                   {onLogout && (
                     <DropdownMenuItem onClick={handlelogout}>

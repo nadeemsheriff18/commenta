@@ -54,7 +54,7 @@ export default function ProjectKeywordsPage() {
       <ProtectedRoute>
         <Layout>
           <div className="flex h-full w-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
           </div>
         </Layout>
       </ProtectedRoute>

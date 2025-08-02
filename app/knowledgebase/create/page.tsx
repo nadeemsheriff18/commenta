@@ -100,7 +100,7 @@ export default function CreateKnowledgeBaseEntryPage() {
                       <Textarea id="content" placeholder="Share your story, mindset, what drives you..." value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={12} className="resize-none" disabled={isAdding} />
                     </div>
                     <div className="flex justify-end pt-4">
-                      <Button onClick={handleAddEntry} disabled={isAdding || !formData.content.trim()} className="bg-indigo-600 hover:bg-indigo-700">
+                      <Button onClick={handleAddEntry} disabled={isAdding || !formData.content.trim()} className="bg-green-600 hover:bg-green-700">
                         {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save Entry
                       </Button>

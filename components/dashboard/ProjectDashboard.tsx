@@ -316,7 +316,7 @@ export default function ProjectDashboard({ project }: ProjectDashboardProps) {
             </TabsList>
             <div className="mt-6">
               {isLoading ? (
-                <div className="text-center py-16"><Loader2 className="mx-auto h-8 w-8 animate-spin text-indigo-600" /></div>
+                <div className="text-center py-16"><Loader2 className="mx-auto h-8 w-8 animate-spin text-green-600" /></div>
               ) : mentions.length === 0 ? (
                 <div className="text-center py-16 border-2 border-dashed rounded-lg">
                   <MessageSquare className="mx-auto h-12 w-12 text-gray-400 mb-4" />

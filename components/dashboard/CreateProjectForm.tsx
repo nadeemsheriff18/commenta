@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation"; // --- ADDED: Import the router
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,6 @@ interface CreateProjectFormProps {
   onBack?: () => void;
 }
 
-// --- MODIFIED: New loading messages ---
 const loadingMessages = [
   "Finding Relevant Subreddits",
   "Fetching Recent Product Mentions",
@@ -42,6 +42,7 @@ export default function CreateProjectForm({
   onCreateProject,
   onBack,
 }: CreateProjectFormProps) {
+  const router = useRouter(); // --- ADDED: Initialize the router
   const [formData, setFormData] = useState<FormState>({
     name: "",
     product_link: "",
@@ -65,12 +66,12 @@ export default function CreateProjectForm({
           }
           return prev;
         });
-      }, 3000); // Change message every 3 seconds (12s total / 4 steps)
+      }, 3000);
     }
     return () => clearInterval(interval);
   }, [isSubmitting]);
-  
- const handleGenerateExplain = async () => {
+
+  const handleGenerateExplain = async () => {
     if (!formData.product_link) {
       toast.error("Please enter a product URL first.");
       setErrors((prev) => ({ ...prev, product_link: "Product link is required to auto-generate." }));
@@ -96,7 +97,8 @@ export default function CreateProjectForm({
       setIsGenerating(false);
     }
   };
- const validateForm = (): boolean => {
+
+  const validateForm = (): boolean => {
     const newErrors: Partial<FormState> = {};
     if (!formData.name.trim()) newErrors.name = "Project name is required";
     if (!formData.product_link.trim()) newErrors.product_link = "Product link is required";
@@ -107,43 +109,48 @@ export default function CreateProjectForm({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) {
-      toast.error("Please fill in all required fields.");
-      return;
+  // --- MODIFIED: This function now redirects to the new project ---
+  // In CreateProjectForm.tsx
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!validateForm()) {
+    toast.error("Please fill in all required fields.");
+    return;
+  }
+  setIsSubmitting(true);
+  setLoadingMessageIndex(0);
+  try {
+    const createPayload: CreateProjectData = {
+      name: formData.name,
+      product_link: formData.product_link,
+      product_explanation: {
+        audience: formData.audience,
+        problem: formData.problem,
+        solution: formData.solution,
+      },
+    };
+
+    const response = await apiService.createProject(createPayload);
+
+    // --- MODIFIED: Check for `proj_id` from the backend response ---
+    if (response.success && response.data?.proj_id) {
+      toast.success("Project created successfully!");
+      router.push(`/projects/${response.data.proj_id}`); // Use proj_id for the redirect
+    } else {
+      setIsSubmitting(false); // Stop loading on failure
+      toast.error(response.message || "Failed to create project. The response might be missing the project ID.");
     }
-    setIsSubmitting(true);
-    setLoadingMessageIndex(0);
-    try {
-      const createPayload: CreateProjectData = {
-        name: formData.name,
-        product_link: formData.product_link,
-        product_explanation: {
-          audience: formData.audience,
-          problem: formData.problem,
-          solution: formData.solution,
-        },
-      };
-      const response = await apiService.createProject(createPayload);
-      if (response.success) {
-        toast.success("Project created successfully!");
-        onCreateProject();
-      } else {
-        toast.error(response.message || "Failed to create project");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create project");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  } catch (error: any) {
+    setIsSubmitting(false); // Stop loading on error
+    toast.error(error.message || "An unexpected error occurred.");
+  }
+};
 
   const handleInputChange = (field: keyof FormState, value: string) => {
     if (field === 'product_link') {
       setFormData((prev) => ({ ...prev, product_link: value }));
       try {
-        // --- ADDED: Auto-fill project name from URL ---
         const url = new URL(value);
         const hostname = url.hostname.replace(/^www\./, '');
         const name = hostname.split('.')[0];
@@ -156,7 +163,7 @@ export default function CreateProjectForm({
         // Invalid URL, do nothing
       }
     } else {
-        setFormData((prev) => ({ ...prev, [field]: value }));
+      setFormData((prev) => ({ ...prev, [field]: value }));
     }
 
     if (errors[field]) {
@@ -165,7 +172,7 @@ export default function CreateProjectForm({
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-off-white min-h-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-full">
         <div className="max-w-3xl mx-auto">
             {onBack && (
                 <div className="mb-4">
@@ -188,7 +195,7 @@ export default function CreateProjectForm({
                                         {index < loadingMessageIndex ? (
                                             <CheckCircle2 className="h-6 w-6 text-green-600" />
                                         ) : index === loadingMessageIndex ? (
-                                            <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                                            <Loader2 className="h-6 w-6 animate-spin text-green-600" />
                                         ) : (
                                             <Circle className="h-6 w-6 text-gray-300" />
                                         )}
@@ -196,7 +203,7 @@ export default function CreateProjectForm({
                                     <span className={cn(
                                         "font-medium",
                                         index < loadingMessageIndex ? "text-gray-500 line-through" : "",
-                                        index === loadingMessageIndex ? "text-indigo-600" : "text-gray-400"
+                                        index === loadingMessageIndex ? "text-green-600" : "text-gray-400"
                                     )}>
                                         {message}
                                     </span>

@@ -49,7 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { apiService, Project, ProjectListingResponse } from "@/lib/api";
+import { apiService, OverallStats, Project, ProjectListingResponse } from "@/lib/api";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -68,7 +68,8 @@ export default function ProjectsList({
   const [isLoading, setIsLoading] = useState(true);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [stats, setStats] = useState<Omit<ProjectListingResponse, 'projects'> | null>(null);
+  const [stats, setStats] = useState<OverallStats | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const router = useRouter();
@@ -84,7 +85,7 @@ export default function ProjectsList({
             total_projects: response.data.total_projects,
             total_mentions: response.data.total_mentions,
             total_subreddits: response.data.total_subreddits,
-            total_completed: response.data.total_completed,
+            total_completed_mentions: response.data.total_completed_mentions,
         });
         if (response.data.total_projects === 0 && !debouncedSearchTerm && pathname === '/projects') {
             router.push("/projects/create");
@@ -130,7 +131,7 @@ export default function ProjectsList({
   if (isLoading && projects.length === 0) {
     return (
       <div className="flex items-center justify-center h-full bg-off-white">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -154,24 +155,24 @@ export default function ProjectsList({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm bg-white"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Projects</CardTitle><Target className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_projects ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-xl bg-white b-4 border-green-700"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Projects</CardTitle><Target className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_projects ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total number of projects in your account.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm bg-white"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Mentions</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_mentions ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-xl bg-white b-4 border-green-700"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Mentions</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_mentions ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total mentions found across all your projects.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm bg-white"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Subreddits</CardTitle><Hash className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_subreddits ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-xl bg-white b-4 border-green-700"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Subreddits</CardTitle><Hash className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_subreddits ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total subreddits being monitored across all projects.</p></TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Card className="shadow-sm bg-white"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Completed Mentions</CardTitle><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_completed ?? 0}</div></CardContent></Card></TooltipTrigger>
+                <TooltipTrigger asChild><Card className="shadow-xl bg-white b-4 border-green-700"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Completed Mentions</CardTitle><CheckCircle2 className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats?.total_completed_mentions ?? 0}</div></CardContent></Card></TooltipTrigger>
                 <TooltipContent><p>The total number of mentions you have marked as 'Completed'.</p></TooltipContent>
               </Tooltip>
           </div>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-xl">
             
             <CardContent className="bg-white">
               <Table>

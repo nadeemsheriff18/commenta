@@ -2,7 +2,7 @@
 
 import Cookies from 'js-cookie';
 //process.env.NEXT_PUBLIC_API_URL ||
-const API_BASE_URL =process.env.NEXT_PUBLIC_API_URL ||'http://127.0.0.1:8000';
+const API_BASE_URL ='http://127.0.0.1:8000';
 
 // --- INTERFACES ---
 export interface ApiResponse<T = any> {
@@ -81,12 +81,26 @@ export interface SubredditInfo {
   over18: boolean;
   url: string;
   isSystemAdded?: boolean;
+  image_url: string;
+}
+export interface AccountDetails {
+  name: string;
+  email: string;
+  plan_name: string;
+  is_expired: boolean;
+  expires_on: string;
+  active_subreds: number;
+  max_subreds: number;
+  comments_count: number;
+  max_comments: number;
+  kb_size: number;
+  max_kb_size: number;
 }
 export interface ProjectListingResponse {
   total_projects: number;
   total_mentions: number;
   total_subreddits: number;
-  total_completed: number; // <-- ADD THIS LINE
+  total_completed_mentions: number; // <-- ADD THIS LINE
   projects: Project[];
 }
 
@@ -105,6 +119,7 @@ export interface OverallStats {
     total_projects: number;
     total_mentions: number;
     total_subreddits: number;
+    total_completed_mentions:number;
 }
 export interface ProjectStats {
     total_mentions: number;
@@ -143,30 +158,44 @@ export interface ManualAuthData { email: string; password: string; timezone: str
 export interface VerifyEmailData { token: string; }
 export interface ResetPasswordData { token: string; new_password: string; }
 export interface OAuthCallbackData { code: string; timezone: string; }
-
+export interface CreateProjectResponse {
+  proj_id: number;
+}
 
 class ApiService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-    const token = Cookies.get('auth_token');
-    const config: RequestInit = {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
-    };
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || 'Request failed');
+  const token = Cookies.get('auth_token');
+  const config: RequestInit = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    },
+  };
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        window.dispatchEvent(
+          new CustomEvent("show403Popup", {
+            detail: {
+              message: data?.detail || "You’ve exceeded your usage limit. Please upgrade your plan."
+            }
+          })
+        );
       }
-      return { success: true, data: data, pagination: data.pagination };
-    } catch (error: any) {
-      return { success: false, message: error.message };
+      throw new Error(data.detail || 'Request failed');
     }
+
+    return { success: true, data: data, pagination: data.pagination };
+  } catch (error: any) {
+    return { success: false, message: error.message };
   }
+}
+
 
   // AUTHENTICATION
   async manualAuth(data: ManualAuthData) { return this.makeRequest('/manual_auth', { method: 'POST', body: JSON.stringify(data) }); }
@@ -178,12 +207,19 @@ class ApiService {
   async handleOAuthCallback(data: OAuthCallbackData) { return this.makeRequest('/auth_callback', { method: 'POST', body: JSON.stringify(data) }); }
 
   // PROJECTS & STATS
-  
+  async getAccountDetails(): Promise<ApiResponse<AccountDetails>> {
+  return this.makeRequest<AccountDetails>('/account');
+}
   // In your ApiService class
 async getProjects(params?: PaginationParams): Promise<ApiResponse<ProjectListingResponse>> {
   return this.makeRequest<ProjectListingResponse>(`/proj_listing`);
 }
-  async createProject(data: CreateProjectData) { return this.makeRequest('/create_project', { method: 'POST', body: JSON.stringify(data) }); }
+  async createProject(data: CreateProjectData): Promise<ApiResponse<CreateProjectResponse>> {
+    return this.makeRequest('/create_project', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
   async deleteProject(data: { proj_id: number }) { return this.makeRequest('/delete_project', { method: 'POST', body: JSON.stringify(data) }); }
   async getOverallStats() { return this.makeRequest<OverallStats>('/overall_stats'); }
   async getProjectStats(projId: string) { return this.makeRequest<ProjectStats>(`/project_stats?proj_id=${projId}`); }

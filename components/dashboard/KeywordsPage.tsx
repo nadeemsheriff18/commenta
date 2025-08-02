@@ -85,6 +85,13 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
     fetchKeywords();
   }, [fetchKeywords]);
 
+  // --- ADDED: This useEffect resets the input field when the dialog closes ---
+  useEffect(() => {
+    if (!isAddDialogOpen) {
+      setNewKeywords("");
+    }
+  }, [isAddDialogOpen]);
+
   const handleAddKeywords = async () => {
     if (!project?.id || !newKeywords.trim()) {
       toast.error("Please enter keywords to add");
@@ -100,8 +107,7 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
       const response = await apiService.addKeywords({ proj_id: project.id, keywords: keywordList });
       if (response.success) {
         toast.success(`Added ${keywordList.length} keyword(s) successfully`);
-        setNewKeywords("");
-        setIsAddDialogOpen(false);
+        setIsAddDialogOpen(false); // This will trigger the useEffect above to clear the state
         fetchKeywords();
       } else {
         toast.error(response.message || "Failed to add keywords");
@@ -148,7 +154,6 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-full">
-      {/* --- MODIFIED: Removed mx-auto to align content to the left --- */}
       <div className="w-full text-left">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -159,27 +164,26 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
               <Button className="flex items-center bg-green-700 hover:bg-green-800"><Plus className="mr-2 h-4 w-4" />Add Keywords</Button>
             </DialogTrigger>
             <DialogContent>
-  <DialogHeader>
-    <DialogTitle>Add New Keywords</DialogTitle>
-    <DialogDescription>Separate multiple keywords with commas.</DialogDescription>
-  </DialogHeader>
-  <div className="space-y-2 py-4">
-    <Label htmlFor="keywords">Keywords</Label>
-    <Input
-      id="keywords"
-      placeholder="keyword1, keyword2, keyword3"
-      value={newKeywords}
-      onChange={(e) => setNewKeywords(e.target.value)}
-    />
-  </div>
-  {/* --- MODIFIED: Added justify-center to center the button --- */}
-  <DialogFooter className="justify-center">
-    <Button onClick={handleAddKeywords} disabled={isAdding || !newKeywords.trim()} className="justify-self-center bg-green-700">
-      {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Add Keywords
-    </Button>
-  </DialogFooter>
-</DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Keywords</DialogTitle>
+                <DialogDescription>Separate multiple keywords with commas.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2 py-4">
+                <Label htmlFor="keywords">Keywords</Label>
+                <Input
+                  id="keywords"
+                  placeholder="keyword1, keyword2, keyword3"
+                  value={newKeywords}
+                  onChange={(e) => setNewKeywords(e.target.value)}
+                />
+              </div>
+              <DialogFooter className="justify-center">
+                <Button onClick={handleAddKeywords} disabled={isAdding || !newKeywords.trim()} className="justify-self-center bg-green-700">
+                  {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Add Keywords
+                </Button>
+              </DialogFooter>
+            </DialogContent>
           </Dialog>
         </div>
         
@@ -201,7 +205,7 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
           ) : (
             <div className="space-y-3">
               {keywords.map((keyword) => (
-                <div key={keyword} className="p-4 bg-white rounded-lg shadow-sm border-l-4 border-green-700">
+                <div key={keyword} className="p-4 bg-white rounded-lg shadow-sm border-2 border-l-4 border-l-green-700">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">{keyword}</h3>
                     <Button
