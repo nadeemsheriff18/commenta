@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,12 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Plus,
-  Trash,
-  Hash,
-  Loader2,
-} from "lucide-react";
+import { Plus, Trash, Hash, Loader2, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -49,98 +45,148 @@ interface KeywordsPageProps {
   project: Project | null;
 }
 
+// Query keys for React Query
+const QUERY_KEYS = {
+  keywords: (projectId: any) => ["keywords", projectId] as const,
+};
+
 export default function KeywordsPage({ project }: KeywordsPageProps) {
-  const [keywords, setKeywords] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [keywordToDelete, setKeywordToDelete] = useState<string | null>(null);
   const [newKeywords, setNewKeywords] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
 
-  const fetchKeywords = useCallback(async () => {
-    if (!project?.id) {
-      setIsLoading(false);
-      setKeywords([]);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const response = await apiService.getKeywords(project.id);
-      if (response.success && response.data?.keyword) {
-        setKeywords(response.data.keyword || []);
-      } else {
-        setKeywords([]);
-        toast.error(response.message || "Failed to fetch keywords");
+  // Fetch keywords with React Query
+  const {
+    data: keywords = [],
+    isLoading,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: QUERY_KEYS.keywords(project?.id || 0),
+    queryFn: async () => {
+      if (!project?.id) {
+        return [];
       }
-    } catch (error: any) {
-      setKeywords([]);
-      toast.error(error.message || "Failed to fetch keywords");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [project?.id]);
+      const response = await apiService.getKeywords(project.id);
+      if (!response.success) {
+        throw new Error(response.message || "Failed to fetch keywords");
+      }
+      return response.data?.keyword || [];
+    },
+    enabled: !!project?.id, // Only run query if project exists
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
 
-  useEffect(() => {
-    fetchKeywords();
-  }, [fetchKeywords]);
+  // Add keywords mutation
+  const addKeywordsMutation = useMutation({
+    mutationFn: async (data: { projectId: any; keywords: string[] }) => {
+      const response = await apiService.addKeywords({
+        proj_id: data.projectId,
+        keywords: data.keywords,
+      });
+      if (!response.success) {
+        throw new Error(response.message || "Failed to add keywords");
+      }
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      toast.success(
+        `Added ${variables.keywords.length} keyword(s) successfully`
+      );
+      setIsAddDialogOpen(false);
+      setNewKeywords("");
+      // Invalidate and refetch keywords
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.keywords(variables.projectId),
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to add keywords");
+    },
+  });
 
-  // --- ADDED: This useEffect resets the input field when the dialog closes ---
+  // Delete keyword mutation
+  const deleteKeywordMutation = useMutation({
+    mutationFn: async (data: { projectId: any; keyword: string }) => {
+      const response = await apiService.deleteKeywords({
+        proj_id: data.projectId,
+        del_keywords: [data.keyword],
+      });
+      if (!response.success) {
+        throw new Error(response.message || "Failed to delete keyword");
+      }
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      toast.success(`Keyword "${variables.keyword}" deleted successfully`);
+      setKeywordToDelete(null);
+      // Invalidate and refetch keywords
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.keywords(variables.projectId),
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete keyword");
+    },
+  });
+
+  // Reset input field when dialog closes
   useEffect(() => {
     if (!isAddDialogOpen) {
       setNewKeywords("");
     }
   }, [isAddDialogOpen]);
 
+  // Handle error display
+  if (error) {
+    toast.error(error.message || "Failed to fetch keywords");
+  }
+
   const handleAddKeywords = async () => {
     if (!project?.id || !newKeywords.trim()) {
       toast.error("Please enter keywords to add");
       return;
     }
-    const keywordList = newKeywords.split(",").map((k) => k.trim()).filter(Boolean);
+
+    const keywordList = newKeywords
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
+
     if (keywordList.length === 0) {
       toast.error("Please enter valid keywords");
       return;
     }
-    setIsAdding(true);
-    try {
-      const response = await apiService.addKeywords({ proj_id: project.id, keywords: keywordList });
-      if (response.success) {
-        toast.success(`Added ${keywordList.length} keyword(s) successfully`);
-        setIsAddDialogOpen(false); // This will trigger the useEffect above to clear the state
-        fetchKeywords();
-      } else {
-        toast.error(response.message || "Failed to add keywords");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to add keywords");
-    } finally {
-      setIsAdding(false);
-    }
+
+    addKeywordsMutation.mutate({
+      projectId: project.id,
+      keywords: keywordList,
+    });
   };
 
   const handleDeleteKeyword = async () => {
     if (!project?.id || !keywordToDelete) return;
-    setIsDeleting(true);
+
+    deleteKeywordMutation.mutate({
+      projectId: project.id,
+      keyword: keywordToDelete,
+    });
+  };
+
+  const handleRefresh = async () => {
     try {
-      const response = await apiService.deleteKeywords({
-        proj_id: project.id,
-        del_keywords: [keywordToDelete],
-      });
-      if (response.success) {
-        toast.success(`Keyword "${keywordToDelete}" deleted successfully`);
-        setKeywordToDelete(null);
-        fetchKeywords();
-      } else {
-        toast.error(response.message || "Failed to delete keyword");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete keyword");
-    } finally {
-      setIsDeleting(false);
+      await refetch();
+      toast.success("Keywords refreshed successfully");
+    } catch (error) {
+      toast.error("Failed to refresh keywords");
     }
   };
-  
+
   if (!project) {
     return (
       <div className="p-6 text-center">
@@ -157,55 +203,101 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
       <div className="w-full text-left">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Keywords</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Keywords
+              {isFetching && (
+                <Loader2 className="inline-block ml-2 h-5 w-5 animate-spin text-green-700" />
+              )}
+            </h1>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center bg-green-700 hover:bg-green-800"><Plus className="mr-2 h-4 w-4" />Add Keywords</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Keywords</DialogTitle>
-                <DialogDescription>Separate multiple keywords with commas.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2 py-4">
-                <Label htmlFor="keywords">Keywords</Label>
-                <Input
-                  id="keywords"
-                  placeholder="keyword1, keyword2, keyword3"
-                  value={newKeywords}
-                  onChange={(e) => setNewKeywords(e.target.value)}
-                />
-              </div>
-              <DialogFooter className="justify-center">
-                <Button onClick={handleAddKeywords} disabled={isAdding || !newKeywords.trim()} className="justify-self-center bg-green-700">
-                  {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isFetching}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              />
+              {isFetching ? "Refreshing..." : "Refresh"}
+            </Button>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center bg-green-700 hover:bg-green-800">
+                  <Plus className="mr-2 h-4 w-4" />
                   Add Keywords
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Keywords</DialogTitle>
+                  <DialogDescription>
+                    Separate multiple keywords with commas.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 py-4">
+                  <Label htmlFor="keywords">Keywords</Label>
+                  <Input
+                    id="keywords"
+                    placeholder="keyword1, keyword2, keyword3"
+                    value={newKeywords}
+                    onChange={(e) => setNewKeywords(e.target.value)}
+                  />
+                </div>
+                <DialogFooter className="justify-center">
+                  <Button
+                    onClick={handleAddKeywords}
+                    disabled={
+                      addKeywordsMutation.isPending || !newKeywords.trim()
+                    }
+                    className="justify-self-center bg-green-700"
+                  >
+                    {addKeywordsMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Add Keywords
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-        
+
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">All Keywords ({keywords.length})</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            All Keywords ({keywords.length})
+          </h2>
           {isLoading ? (
-            <div className="py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-green-700" />
+            <div className="py-8 flex justify-center">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-green-700 mx-auto mb-2" />
+                <p className="text-gray-600">Loading keywords...</p>
+              </div>
             </div>
           ) : keywords.length === 0 ? (
             <div className="py-8 border-2 border-dashed rounded-lg p-6 text-left">
               <Hash className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No keywords yet</h3>
-              <p className="text-gray-600 mb-4">Add keywords to start tracking mentions for your project.</p>
-              <Button onClick={() => setIsAddDialogOpen(true)} className="bg-green-700 hover:bg-green-800">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No keywords yet
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Add keywords to start tracking mentions for your project.
+              </p>
+              <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-green-700 hover:bg-green-800"
+              >
                 <Plus className="mr-2 h-4 w-4" /> Add Your First Keywords
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               {keywords.map((keyword) => (
-                <div key={keyword} className="p-4 bg-white rounded-lg shadow-sm border-2 border-l-4 border-l-green-700">
+                <div
+                  key={keyword}
+                  className="p-4 bg-white rounded-lg shadow-sm border-2 border-l-4 border-l-green-700"
+                >
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">{keyword}</h3>
                     <Button
@@ -213,6 +305,7 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => setKeywordToDelete(keyword)}
+                      disabled={deleteKeywordMutation.isPending}
                     >
                       <Trash className="h-4 w-4 text-red-500" />
                     </Button>
@@ -224,22 +317,32 @@ export default function KeywordsPage({ project }: KeywordsPageProps) {
         </div>
       </div>
 
-      <AlertDialog open={!!keywordToDelete} onOpenChange={() => setKeywordToDelete(null)}>
+      <AlertDialog
+        open={!!keywordToDelete}
+        onOpenChange={() => setKeywordToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the keyword "{keywordToDelete}".
+              This action cannot be undone. This will permanently delete the
+              keyword "{keywordToDelete}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteKeywordMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteKeyword}
-              disabled={isDeleting}
+              disabled={deleteKeywordMutation.isPending}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete"}
+              {deleteKeywordMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

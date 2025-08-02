@@ -15,7 +15,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    console.log("Protected route : ", user, isLoading);
+    // console.log("Protected route : ", user, isLoading);
     if (!isLoading && !user) {
       // Redirect to login with the current path as a query parameter
       router.push(`/login?from=${encodeURIComponent(pathname)}`);

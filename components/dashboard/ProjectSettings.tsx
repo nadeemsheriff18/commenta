@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,61 +31,55 @@ const defaultProject: Project = {
   created_at: new Date().toISOString(),
 };
 
-// --- MODIFIED: dummySettings now matches the nested ProjectSettingsType ---
 const dummySettings: ProjectSettingsType = {
-    name: "FameWall (Preview)",
-    prod_url: "https://example.com/my-awesome-product",
-    prod_info: {
-        problem: "Users need a simple and effective way to track online brand mentions without dealing with complex and expensive enterprise tools.",
-        audience: "Designed for indie hackers, startups, and small marketing teams who need to stay on top of their online presence.",
-        solution: "Our tool provides a clean, intuitive dashboard to monitor keywords and subreddits for relevant conversations, with AI-powered comment generation to save time."
-    }
+  name: "FameWall (Preview)",
+  prod_url: "https://example.com/my-awesome-product",
+  prod_info: {
+    problem:
+      "Users need a simple and effective way to track online brand mentions without dealing with complex and expensive enterprise tools.",
+    audience:
+      "Designed for indie hackers, startups, and small marketing teams who need to stay on top of their online presence.",
+    solution:
+      "Our tool provides a clean, intuitive dashboard to monitor keywords and subreddits for relevant conversations, with AI-powered comment generation to save time.",
+  },
 };
 
-export default function ProjectSettings({ project: projectProp }: ProjectSettingsProps) {
+export default function ProjectSettings({
+  project: projectProp,
+}: ProjectSettingsProps) {
   const project = projectProp || defaultProject;
   const router = useRouter();
 
-  // --- MODIFIED: Initial state now matches the nested ProjectSettingsType ---
-  const [formData, setFormData] = useState<ProjectSettingsType>({
-    name: "",
-    prod_url: "",
-    prod_info: {
-      problem: "",
-      audience: "",
-      solution: "",
-    },
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  // React Query for fetching project settings
+  const {
+    data: formData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<ProjectSettingsType>({
+    queryKey: ["projectSettings", project.id],
+    queryFn: async (): Promise<ProjectSettingsType> => {
+      // If it's a preview/dummy project, return dummy data
+      if (!projectProp?.id) {
+        return dummySettings;
+      }
 
-  const fetchProjectSettings = useCallback(async () => {
-    if (!projectProp?.id) {
-      setFormData(dummySettings);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
       const response = await apiService.getProjectSettings(projectProp.id);
 
-      // --- MODIFIED: No need to flatten the data ---
       if (response.success && response.data) {
-        setFormData(response.data);
+        return response.data;
       } else {
-        toast.error(response.message || "Failed to fetch project settings");
+        throw new Error(response.message || "Failed to fetch project settings");
       }
-    } catch (error) {
-      toast.error("Failed to fetch project settings");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectProp?.id]);
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => {
-    fetchProjectSettings();
-  }, [fetchProjectSettings]);
-
+  // Handle loading state
   if (isLoading) {
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">
@@ -94,6 +88,42 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
       </div>
     );
   }
+
+  // Handle error state
+  if (error) {
+    // Show toast error when error occurs
+    if (error instanceof Error) {
+      toast.error(error.message || "Failed to fetch project settings");
+    }
+
+    return (
+      <div className="p-6 max-w-3xl mx-auto text-center">
+        <div className="text-red-600 mb-4">
+          <p className="font-semibold">Error loading project settings</p>
+          <p className="text-sm">
+            {error instanceof Error ? error.message : "Unknown error"}
+          </p>
+        </div>
+        <Button onClick={() => refetch()} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // Handle case where no data is available
+  if (!formData) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto text-center">
+        <p className="text-gray-600 mb-4">No project settings found</p>
+        <Button onClick={() => refetch()} variant="outline">
+          Reload
+        </Button>
+      </div>
+    );
+  }
+
+  // At this point, formData is guaranteed to be of type ProjectSettingsType
 
   return (
     <div className="p-6 w-full bg-white">
@@ -132,19 +162,25 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
                   <h3 className="font-semibold text-gray-900">Product URL</h3>
                 </div>
                 <div className="md:col-span-3">
-                  <a href={formData.prod_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                  <a
+                    href={formData.prod_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline break-all"
+                  >
                     {formData.prod_url}
                   </a>
                 </div>
               </div>
-              
-              {/* --- MODIFIED: Accessing nested prod_info properties --- */}
+
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t pt-6">
                 <div className="md:col-span-1">
                   <h3 className="font-semibold text-gray-900">Problem</h3>
                 </div>
                 <div className="md:col-span-3">
-                  <p className="text-gray-800 whitespace-pre-wrap">{formData.prod_info.problem}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap">
+                    {formData.prod_info.problem}
+                  </p>
                 </div>
               </div>
 
@@ -153,7 +189,9 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
                   <h3 className="font-semibold text-gray-900">Audience</h3>
                 </div>
                 <div className="md:col-span-3">
-                  <p className="text-gray-800 whitespace-pre-wrap">{formData.prod_info.audience}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap">
+                    {formData.prod_info.audience}
+                  </p>
                 </div>
               </div>
 
@@ -162,7 +200,9 @@ export default function ProjectSettings({ project: projectProp }: ProjectSetting
                   <h3 className="font-semibold text-gray-900">Solution</h3>
                 </div>
                 <div className="md:col-span-3">
-                  <p className="text-gray-800 whitespace-pre-wrap">{formData.prod_info.solution}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap">
+                    {formData.prod_info.solution}
+                  </p>
                 </div>
               </div>
             </div>

@@ -49,7 +49,7 @@ export default function LoginPage({
     if (email && password && timeZone) {
       setIsSubmitting(true);
       const res = await onLogin(email, password, timeZone);
-      console.log("Login response:", res);
+      // console.log("Login response:", res);
       setIsSubmitting(false);
     }
   };

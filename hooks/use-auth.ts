@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authService, User, AuthResponse } from '@/lib/auth';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -10,6 +11,8 @@ export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
+  const router = useRouter();
+
 
   const checkAuth = useCallback(async () => {
     setIsLoading(true);
@@ -17,9 +20,9 @@ export function useAuth() {
     const storedUser = authService.getStoredUser();
     const token = authService.getToken();
     // Check if token is expired before proceeding
-    console.log("TOKEN-----: ",token);
-    console.log("ISEXPIRED---",authService.isTokenExpired());
-    console.log('000000000000000000000000000')
+    // console.log("TOKEN-----: ",token);
+    // console.log("ISEXPIRED---",authService.isTokenExpired());
+    // console.log('000000000000000000000000000')
     if (token && authService.isTokenExpired()) {
       // console.log("ENTERED SET UsER");
       // Token is expired, clear everything and don't verify with backend
@@ -34,7 +37,7 @@ export function useAuth() {
     }
 
     if (storedUser) {
-      console.log("StoreD usER :;;;;;;;;;",storedUser);
+      // console.log("StoreD usER :;;;;;;;;;",storedUser);
       setUser(storedUser);
       setIsAuthenticated(true);
     }
@@ -48,7 +51,7 @@ export function useAuth() {
 
     const result = await authService.verifyToken();
     if (result) {
-      console.log("Auth check successful:", result);
+      // console.log("Auth check successful:", result);
       setUser(storedUser);
       setIsAuthenticated(true);
       setShowVerificationPrompt(false);
@@ -146,6 +149,8 @@ const login = async (email: string, password: string, timezone: string): Promise
     setShowVerificationPrompt(false);
     setVerificationEmail('');
     toast.success('Logged out successfully');
+    router.push('/login');
+  
   }, []);
 
   const clearVerificationPrompt = useCallback(() => {

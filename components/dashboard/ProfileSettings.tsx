@@ -41,7 +41,7 @@ export default function ProfileSettings({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle profile update logic here
-    console.log("Profile updated:", formData);
+    // console.log("Profile updated:", formData);
   };
 
   const handleInputChange = (field: string, value: string) => {
