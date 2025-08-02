@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Tooltip,
   TooltipContent,
@@ -57,151 +58,316 @@ interface ProjectDashboardProps {
 
 type TabName = "active" | "pinned" | "completed" | "noise" | "ignored";
 
+interface TabState {
+  currentPage: number;
+  expandedMentions: Set<string>;
+  generatingComments: Set<number>;
+  generatedComments: Map<number, string>;
+}
+
+const initialTabState: TabState = {
+  currentPage: 1,
+  expandedMentions: new Set(),
+  generatingComments: new Set(),
+  generatedComments: new Map(),
+};
+
 export default function ProjectDashboard({ project }: ProjectDashboardProps) {
-  const [mentions, setMentions] = useState<Mention[]>([]);
+  const queryClient = useQueryClient();
+
+  // Global state
   const [activeTab, setActiveTab] = useState<TabName>("active");
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState<ProjectStats | null>(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [expandedMentions, setExpandedMentions] = useState<Set<string>>(new Set());
-  const [generatingComments, setGeneratingComments] = useState<Set<number>>(new Set());
-  const [generatedComments, setGeneratedComments] = useState<Map<number, string>>(new Map());
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [timeFilter, setTimeFilter] = useState<number>(24);
-  const [tabCounts, setTabCounts] = useState({ active: 0, pinned: 0, completed: 0, noise: 0, ignored: 0 });
 
-  const fetchMentions = useCallback(async (page: number = 1) => {
-    if (!project?.id) return;
-    setIsLoading(true);
-    try {
-      const params: MentionParams = { proj_id: project.id, hours: timeFilter, page, limit: pageSize };
-      let response;
-      switch (activeTab) {
-        case "active": response = await apiService.getPendingMentions(params); break;
-        case "pinned": response = await apiService.getPinnedMentions(params); break;
-        default: response = await apiService.getActedMentions({ ...params, ment_type: activeTab }); break;
-      }
-      if (response.success && response.data) {
-        setMentions(response.data.ments || []);
-        const totalMentionsFromServer = response.data.total || 0;
-        setTotalPages(Math.ceil(totalMentionsFromServer / pageSize));
-        setCurrentPage(page);
-      } else {
-        setMentions([]);
-        toast.error(response.message || "Failed to fetch mentions");
-      }
-    } catch (error: any) {
-      setMentions([]);
-      toast.error(error.message || "Failed to fetch mentions");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [project?.id, activeTab, pageSize, timeFilter]);
+  // Separate state for each tab
+  const [tabStates, setTabStates] = useState<Record<TabName, TabState>>({
+    active: { ...initialTabState },
+    pinned: { ...initialTabState },
+    completed: { ...initialTabState },
+    noise: { ...initialTabState },
+    ignored: { ...initialTabState },
+  });
 
-  const fetchTabCounts = useCallback(async () => {
-    if (!project?.id) return;
-    try {
-      const tabs: TabName[] = ["active", "pinned", "completed", "noise", "ignored"];
-      const promises = tabs.map(tab => {
-        const params: MentionParams = { proj_id: project.id, hours: timeFilter, limit: 1, page: 1 };
-        if (tab === 'active') return apiService.getPendingMentions(params);
-        if (tab === 'pinned') return apiService.getPinnedMentions(params);
-        return apiService.getActedMentions({ ...params, ment_type: tab });
-      });
-      const responses = await Promise.all(promises);
-      const newCounts = { active: 0, pinned: 0, completed: 0, noise: 0, ignored: 0 };
-      responses.forEach((res, index) => {
-        if (res.success && res.data) {
-          (newCounts as any)[tabs[index]] = res.data.total || 0;
-        }
-      });
-      setTabCounts(newCounts);
-    } catch (error) { console.error("Failed to fetch tab counts:", error); }
-  }, [project?.id, timeFilter]);
+  const currentTabState = tabStates[activeTab];
 
-  const fetchStats = useCallback(async () => {
-    if (!project?.id) return;
-    setIsLoadingStats(true);
-    try {
-      const response = await apiService.getProjectStats(project.id);
-      if (response.success && response.data) {
-        setStats(response.data);
-      } else {
-        toast.error(response.message || "Failed to fetch project stats");
-      }
-    } catch (error) {
-      toast.error("Failed to fetch project stats");
-    } finally {
-      setIsLoadingStats(false);
-    }
-  }, [project?.id]);
-
+  // Invalidate cache when project ID changes
   useEffect(() => {
     if (project?.id) {
-      fetchMentions(currentPage);
-      fetchTabCounts();
-      fetchStats();
+      // Invalidate all queries related to the previous project
+      queryClient.invalidateQueries({
+        queryKey: ["mentions"],
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["projectStats"],
+        exact: false,
+      });
+
+      // Reset all tab states to initial state
+      setTabStates({
+        active: { ...initialTabState },
+        pinned: { ...initialTabState },
+        completed: { ...initialTabState },
+        noise: { ...initialTabState },
+        ignored: { ...initialTabState },
+      });
+
+      // Reset to active tab
+      setActiveTab("active");
     }
-  }, [project?.id, activeTab, pageSize, timeFilter, currentPage, fetchMentions, fetchTabCounts, fetchStats]);
-  
-  useEffect(() => { setGeneratedComments(new Map()); }, [activeTab, currentPage]);
-  
+  }, [project?.id, queryClient]);
+
+  // Query keys
+  const mentionsQueryKey = [
+    "mentions",
+    project?.id,
+    activeTab,
+    currentTabState.currentPage,
+    pageSize,
+    timeFilter,
+  ];
+
+  const statsQueryKey = ["projectStats", project?.id];
+
+  // Fetch mentions query
+  const {
+    data: mentionsData,
+    isLoading: isLoadingMentions,
+    error: mentionsError,
+  } = useQuery({
+    queryKey: mentionsQueryKey,
+    queryFn: async () => {
+      if (!project?.id) throw new Error("No project selected");
+
+      const params: MentionParams = {
+        proj_id: project.id,
+        hours: timeFilter,
+        page: currentTabState.currentPage,
+        limit: pageSize,
+      };
+
+      let response;
+      switch (activeTab) {
+        case "active":
+          response = await apiService.getPendingMentions(params);
+          break;
+        case "pinned":
+          response = await apiService.getPinnedMentions(params);
+          break;
+        default:
+          response = await apiService.getActedMentions({
+            ...params,
+            ment_type: activeTab,
+          });
+          break;
+      }
+
+      if (!response.success || !response.data) {
+        throw new Error(response.message || "Failed to fetch mentions");
+      }
+
+      return {
+        mentions: response.data.ments || [],
+        total: response.data.total || 0,
+        totalPages: Math.ceil((response.data.total || 0) / pageSize),
+      };
+    },
+    enabled: !!project?.id,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+  });
+
+  // Fetch stats query
+  const {
+    data: stats,
+    isLoading: isLoadingStats,
+    error: statsError,
+  } = useQuery({
+    queryKey: statsQueryKey,
+    queryFn: async () => {
+      if (!project?.id) throw new Error("No project selected");
+
+      const response = await apiService.getProjectStats(project.id);
+
+      if (!response.success || !response.data) {
+        throw new Error(response.message || "Failed to fetch project stats");
+      }
+
+      return response.data;
+    },
+    enabled: !!project?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+  });
+
+  // Handle errors
+  useEffect(() => {
+    if (mentionsError) {
+      toast.error(mentionsError.message || "Failed to fetch mentions");
+    }
+  }, [mentionsError]);
+
+  useEffect(() => {
+    if (statsError) {
+      toast.error(statsError.message || "Failed to fetch project stats");
+    }
+  }, [statsError]);
+
+  // Reset generated comments when tab or page changes
+  useEffect(() => {
+    setTabStates((prev) => ({
+      ...prev,
+      [activeTab]: {
+        ...prev[activeTab],
+        generatedComments: new Map(),
+      },
+    }));
+  }, [activeTab, currentTabState.currentPage]);
+
+  const updateTabState = (updates: Partial<TabState>) => {
+    setTabStates((prev) => ({
+      ...prev,
+      [activeTab]: {
+        ...prev[activeTab],
+        ...updates,
+      },
+    }));
+  };
+
   const handleReload = () => {
     toast.info("Refreshing mentions...");
-    fetchMentions(currentPage);
-    fetchTabCounts();
-    fetchStats();
+    queryClient.invalidateQueries({ queryKey: mentionsQueryKey });
+    queryClient.invalidateQueries({ queryKey: statsQueryKey });
   };
-  
-  const handleGenerateComment = async (mentionId: number, isRelevant: boolean) => {
-    setGeneratingComments((prev) => new Set(prev).add(mentionId));
+
+  const handleGenerateComment = async (
+    mentionId: number,
+    isRelevant: boolean
+  ) => {
+    updateTabState({
+      generatingComments: new Set(currentTabState.generatingComments).add(
+        mentionId
+      ),
+    });
+
     try {
-      const response = await apiService.generateComment({ ment_id: mentionId, is_relvent: isRelevant });
+      const response = await apiService.generateComment({
+        ment_id: mentionId,
+        is_relvent: isRelevant,
+      });
+
       if (response.success && response.data) {
-        setGeneratedComments((prev) => new Map(prev).set(mentionId, response.data!.comment));
+        updateTabState({
+          generatedComments: new Map(currentTabState.generatedComments).set(
+            mentionId,
+            response.data.comment
+          ),
+          generatingComments: (() => {
+            const newSet = new Set(currentTabState.generatingComments);
+            newSet.delete(mentionId);
+            return newSet;
+          })(),
+        });
         toast.success("Comment generated successfully!");
       } else {
         toast.error(response.message || "Failed to generate comment");
       }
-    } catch (error: any) { 
-      toast.error(error.message || "Failed to generate comment"); 
-    }
-    finally { 
-      setGeneratingComments((prev) => { 
-        const newSet = new Set(prev); 
-        newSet.delete(mentionId); 
-        return newSet; 
-      }); 
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate comment");
+    } finally {
+      updateTabState({
+        generatingComments: (() => {
+          const newSet = new Set(currentTabState.generatingComments);
+          newSet.delete(mentionId);
+          return newSet;
+        })(),
+      });
     }
   };
 
-  const handleActOnMention = async (mentionId: number, type: "completed" | "ignored" | "pinned" | "noise" | "active", comment: string = "") => {
-    const response = await apiService.actOnMention({ ment_id: mentionId, type, comment });
+  const handleActOnMention = async (
+    mentionId: number,
+    type: "completed" | "ignored" | "pinned" | "noise" | "active",
+    comment: string = ""
+  ) => {
+    const response = await apiService.actOnMention({
+      ment_id: mentionId,
+      type,
+      comment,
+    });
+
     if (response.success) {
       toast.success(`Mention moved to ${type}`);
-      // Optimistically remove from UI
-      setMentions((prev) => prev.filter((m) => m.id !== mentionId));
-      // Refetch counts to keep them updated
-      fetchTabCounts();
-      fetchStats();
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: mentionsQueryKey });
+      queryClient.invalidateQueries({ queryKey: statsQueryKey });
+
+      // Also invalidate other tabs that might be affected
+      queryClient.invalidateQueries({
+        queryKey: ["mentions", project?.id],
+        exact: false,
+      });
     } else {
       toast.error(response.message || "Failed to update mention");
     }
   };
-  
+
   const handleCopyAndComplete = async (mentionId: number, comment: string) => {
-    try { await navigator.clipboard.writeText(comment); await handleActOnMention(mentionId, "completed", comment); }
-    catch (error) { toast.error("Failed to copy comment to clipboard"); }
+    try {
+      await navigator.clipboard.writeText(comment);
+      await handleActOnMention(mentionId, "completed", comment);
+    } catch (error) {
+      toast.error("Failed to copy comment to clipboard");
+    }
   };
-  const handleGeneratedCommentChange = (mentionId: number, newComment: string) => { setGeneratedComments((prev) => new Map(prev).set(mentionId, newComment)); };
-  const toggleExpanded = (mentionId: string) => { setExpandedMentions((prev) => { const newSet = new Set(prev); if (newSet.has(mentionId)) { newSet.delete(mentionId); } else { newSet.add(mentionId); } return newSet; }); };
-  const handlePageChange = (page: number) => { setCurrentPage(page); };
+
+  const handleGeneratedCommentChange = (
+    mentionId: number,
+    newComment: string
+  ) => {
+    updateTabState({
+      generatedComments: new Map(currentTabState.generatedComments).set(
+        mentionId,
+        newComment
+      ),
+    });
+  };
+
+  const toggleExpanded = (mentionId: string) => {
+    const newExpandedMentions = new Set(currentTabState.expandedMentions);
+    if (newExpandedMentions.has(mentionId)) {
+      newExpandedMentions.delete(mentionId);
+    } else {
+      newExpandedMentions.add(mentionId);
+    }
+    updateTabState({ expandedMentions: newExpandedMentions });
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= (mentionsData?.totalPages || 1)) {
+      updateTabState({ currentPage: page });
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as TabName);
+  };
 
   if (!project) {
-    return <div className="p-6 text-center"><h2 className="text-2xl font-bold">No Project Selected</h2><p className="text-gray-600">Create or select a project to view the dashboard.</p></div>;
+    return (
+      <div className="p-6 text-center">
+        <h2 className="text-2xl font-bold">No Project Selected</h2>
+        <p className="text-gray-600">
+          Create or select a project to view the dashboard.
+        </p>
+      </div>
+    );
   }
+
+  const mentions = mentionsData?.mentions || [];
+  const totalPages = mentionsData?.totalPages || 1;
 
   return (
     <TooltipProvider>
@@ -209,118 +375,165 @@ export default function ProjectDashboard({ project }: ProjectDashboardProps) {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{project.name}</h1>
-              <p className="mt-1 text-gray-600">Monitor and respond to relevant mentions.</p>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+                {project.name}
+              </h1>
+              <p className="mt-1 text-gray-600">
+                Monitor and respond to relevant mentions.
+              </p>
             </div>
             <div className="flex items-center gap-2 mt-4 md:mt-0">
-              <Select value={timeFilter.toString()} onValueChange={(val) => setTimeFilter(Number(val))}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by time" /></SelectTrigger>
+              <Select
+                value={timeFilter.toString()}
+                onValueChange={(val) => setTimeFilter(Number(val))}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by time" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="24">Last 24 hours</SelectItem>
                   <SelectItem value="168">Last 7 days</SelectItem>
                   <SelectItem value="720">Last 30 days</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" onClick={handleReload} disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReload}
+                disabled={isLoadingMentions}
+              >
+                {isLoadingMentions ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
                 Reload
               </Button>
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Mentions</CardTitle>
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.total_mentions}
-          </div>
-        </CardContent>
-      </Card>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p>The total number of mentions found for this project.</p>
-    </TooltipContent>
-  </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Total Mentions
+                    </CardTitle>
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {isLoadingStats ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : (
+                        stats?.total_mentions
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>The total number of mentions found for this project.</p>
+              </TooltipContent>
+            </Tooltip>
 
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Subreddits</CardTitle>
-          <Hash className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.total_subreddits}
-          </div>
-        </CardContent>
-      </Card>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p>The total number of subreddits being monitored.</p>
-    </TooltipContent>
-  </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Total Subreddits
+                    </CardTitle>
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {isLoadingStats ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : (
+                        stats?.total_subreddits
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>The total number of subreddits being monitored.</p>
+              </TooltipContent>
+            </Tooltip>
 
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Completed Mentions</CardTitle>
-          <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.completed_mentions}
-          </div>
-        </CardContent>
-      </Card>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p>The number of mentions you have marked as 'Completed'.</p>
-    </TooltipContent>
-  </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Completed Mentions
+                    </CardTitle>
+                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {isLoadingStats ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : (
+                        stats?.completed_mentions
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>The number of mentions you have marked as 'Completed'.</p>
+              </TooltipContent>
+            </Tooltip>
 
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Avg. Relevance</CardTitle>
-          <Percent className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : `${stats?.avg_relevance.toFixed(1)}%`}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Avg. Relevance
+                    </CardTitle>
+                    <Percent className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {isLoadingStats ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : (
+                        `${stats?.avg_relevance?.toFixed(1) || 0}%`
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>The average relevance score of mentions found.</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
-        </CardContent>
-      </Card>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p>The average relevance score of mentions found.</p>
-    </TooltipContent>
-  </Tooltip>
-</div>
 
-          <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value as TabName); setCurrentPage(1); }}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="active">Active ({tabCounts.active})</TabsTrigger>
-              <TabsTrigger value="pinned">Pinned ({tabCounts.pinned})</TabsTrigger>
-              <TabsTrigger value="completed">Completed ({tabCounts.completed})</TabsTrigger>
-              <TabsTrigger value="noise">Noise ({tabCounts.noise})</TabsTrigger>
-              <TabsTrigger value="ignored">Ignored ({tabCounts.ignored})</TabsTrigger>
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="pinned">Pinned</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="noise">Noise</TabsTrigger>
+              <TabsTrigger value="ignored">Ignored</TabsTrigger>
             </TabsList>
+
             <div className="mt-6">
-              {isLoading ? (
-                <div className="text-center py-16"><Loader2 className="mx-auto h-8 w-8 animate-spin text-green-600" /></div>
+              {isLoadingMentions ? (
+                <div className="text-center py-16">
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-indigo-600" />
+                </div>
               ) : mentions.length === 0 ? (
                 <div className="text-center py-16 border-2 border-dashed rounded-lg">
                   <MessageSquare className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium">No mentions in '{activeTab}'</h3>
+                  <h3 className="text-lg font-medium">
+                    No mentions in '{activeTab}'
+                  </h3>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -328,9 +541,16 @@ export default function ProjectDashboard({ project }: ProjectDashboardProps) {
                     <MentionCard
                       key={mention.id}
                       mention={mention}
-                      displayComment={generatedComments.get(mention.id) || mention.comment}
-                      isGenerating={generatingComments.has(mention.id)}
-                      isExpanded={expandedMentions.has(mention.id.toString())}
+                      displayComment={
+                        currentTabState.generatedComments.get(mention.id) ||
+                        mention.comment
+                      }
+                      isGenerating={currentTabState.generatingComments.has(
+                        mention.id
+                      )}
+                      isExpanded={currentTabState.expandedMentions.has(
+                        mention.id.toString()
+                      )}
                       activeTab={activeTab}
                       onToggleExpand={toggleExpanded}
                       onGenerateComment={handleGenerateComment}
@@ -343,13 +563,40 @@ export default function ProjectDashboard({ project }: ProjectDashboardProps) {
               )}
             </div>
           </Tabs>
+
           {totalPages > 1 && (
             <div className="mt-6 flex items-center justify-center">
               <Pagination>
                 <PaginationContent>
-                  <PaginationItem><PaginationPrevious onClick={() => handlePageChange(currentPage - 1)} /></PaginationItem>
-                  <PaginationItem><PaginationLink>{currentPage}</PaginationLink></PaginationItem>
-                  <PaginationItem><PaginationNext onClick={() => handlePageChange(currentPage + 1)} /></PaginationItem>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      className={cn(
+                        "cursor-pointer",
+                        currentTabState.currentPage <= 1 &&
+                          "pointer-events-none opacity-50"
+                      )}
+                      onClick={() =>
+                        handlePageChange(currentTabState.currentPage - 1)
+                      }
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationLink>
+                      {currentTabState.currentPage}
+                    </PaginationLink>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      className={cn(
+                        "cursor-pointer",
+                        currentTabState.currentPage >= totalPages &&
+                          "pointer-events-none opacity-50"
+                      )}
+                      onClick={() =>
+                        handlePageChange(currentTabState.currentPage + 1)
+                      }
+                    />
+                  </PaginationItem>
                 </PaginationContent>
               </Pagination>
             </div>
